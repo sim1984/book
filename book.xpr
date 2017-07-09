@@ -141,5 +141,6 @@
         <file name="book.xml"/>
         <file name="config.xml"/>
         <file name="intro.xml"/>
+        <file name="types.xml"/>
     </projectTree>
 </project>

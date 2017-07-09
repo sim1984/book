@@ -26,6 +26,7 @@
     </info>
     <xi:include href="intro.xml" xpointer="element(/1)"/>
     <xi:include href="config.xml" xpointer="element(/1)"/>
+    <xi:include href="types.xml" xpointer="element(/1)"/> 
     <xi:include href="app.xml" xpointer="element(/1)"/>
     <index>
         <info>

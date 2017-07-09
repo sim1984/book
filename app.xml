@@ -775,10 +775,10 @@ GRANT EXECUTE ON PROCEDURE SP_PAY_FOR_INOVICE TO SUPERUSER;
 GRANT USAGE ON SEQUENCE GEN_CUSTOMER_ID TO SUPERUSER;
 GRANT USAGE ON SEQUENCE GEN_INVOICE_ID TO SUPERUSER;
 GRANT USAGE ON SEQUENCE GEN_PRODUCT_ID TO SUPERUSER;           
-        </programlisting>        
+        </programlisting>
         </para>
         <para>Теперь создадим пользователей и назначим им роли:
-        <programlisting language="sql">
+            <programlisting language="sql">
 CREATE USER IVAN PASSWORD 'z12a';
 CREATE USER ANNA PASSWORD 'lh67';
 
@@ -790,7 +790,37 @@ GRANT SUPERUSER TO IVAN;
         <note>
             <para>Пользователь IVAN может передавать роль MANAGER другим пользователям.</para>
         </note>
+        <para>Теперь сохраним наш скрипт в файле <filename>examples.sql</filename>. Вы можете
+            скачать готовые файлы скриптов по ссылкам <link
+                xmlns:xlink="http://www.w3.org/1999/xlink"
+                xlink:href="https://github.com/sim1984/example-db_2_5/archive/1.0.zip"
+                >https://github.com/sim1984/example-db_2_5/archive/1.0.zip</link> и <link
+                xmlns:xlink="http://www.w3.org/1999/xlink"
+                xlink:href="https://github.com/sim1984/example-db_3_0/archive/1.0.zip"
+                >https://github.com/sim1984/example-db_3_0/archive/1.0.zip</link>
+        </para>
+        <para>Выполним наш скрипт в созданной ранее базе данных:
+            <programlisting>
+isql -user sysdba -password masterkey "localhost:examples" -i "d:\examples-db\examples.sql"            
+        </programlisting>
+        </para>
+        <para>Теперь когда база данных создана вы можете наполнить её тестовыми данными. Сделать это
+            можно с помощью различных инструментов. Каким образом наполнить базу данных тестовыми
+            данными мы не будем рассказывать. Вы можете сделать это самостоятельно.</para>
+        <section>
+            <title>Заключение</title>
+            <para>Вы можете скачать готовые базы данных по ссылкам <link
+                    xmlns:xlink="http://www.w3.org/1999/xlink"
+                    xlink:href="https://github.com/sim1984/example-db_2_5/releases/download/1.0/examples.fdb"
+                    >https://github.com/sim1984/example-db_2_5/releases/download/1.0/examples.fdb</link>
+                и <link xmlns:xlink="http://www.w3.org/1999/xlink"
+                    xlink:href="https://github.com/sim1984/example-db_3_0/releases/download/1.0/examples.fdb"
+                    >https://github.com/sim1984/example-db_3_0/releases/download/1.0/examples.fdb</link>.
+            </para>
+        </section>
     </section>
+
+
 
     <section xml:id="app-delphi">
         <title>Создание приложений с использованием FireDac</title>
@@ -2745,24 +2775,65 @@ end;
         <section>
             <title>Заключение</title>
 
-            <para><link xmlns:xlink="http://www.w3.org/1999/xlink"
-                    xlink:href="http://www.ibase.ru/files/articles/firebird_examples/firebird_example_delphi_source.zip"
-                    >Исходные коды примера приложения</link>
-                <link xmlns:xlink="http://www.w3.org/1999/xlink"
-                    xlink:href="http://www.ibase.ru/files/articles/firebird_examples/firebird_example_database.zip"
-                    >Готовая БД</link>
-                <link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="http://www.ibase.ru"
-                    >www.ibase.ru</link>, <link xmlns:xlink="http://www.w3.org/1999/xlink"
-                    xlink:href="http://www.ibsurgeon.com">www.ibsurgeon.com</link>
-                <link xmlns:xlink="http://www.w3.org/1999/xlink"
-                    xlink:href="mailto:support@ibase.ru">support@ibase.ru</link>, <link
-                    xmlns:xlink="http://www.w3.org/1999/xlink"
-                    xlink:href="mailto:support@ib-aid.com">support@ib-aid.com</link></para>
+            <para>Для работы с СУБД Firebird в Delphi существует множество различных компонентов
+                доступа (Interbase Express (IBX), FibPlus, UIB, UniDAC, IBDac, FireDac). FireDac
+                является стандартным набором компонентов доступа к различным базам данных начиная с
+                Delphi XE3. </para>
+
+            <para>Все запросы к базе данных происходят в рамках транзакции. Для корректной работы
+                приложений с базой данных желательно управлять транзакциями вручную, то есть явно
+                вызывать методы <methodname>StartTransaction</methodname>,
+                    <methodname>Commit</methodname> и <methodname>Rollback</methodname> компонента
+                    <classname>TFDTransaction</classname>. Вы можете использовать столько транзакций
+                сколько требует логика вашего приложения. По возможности все транзакции должны быть
+                короткими.</para>
+            <para>Если требуется длинная читающая транзакция для просмотра журналов или
+                справочников, то такую транзакцию желательно стартовать с параметрами READ
+                READ_COMMITED REC_VERSION. Вы можете стартовать одну такую транзакцию на все
+                журналы/справочники или по одной транзакции на каждый журнал/справочник.</para>
+            <para>Пишущие транзакции должны быть максимально короткими. Если вы используете сложную
+                логику при редактировании данных (изменение нескольких таблиц, расчёты хранимых
+                агрегатов и др.), то необходимо использовать режим изолированности SNAPSHOT. Для
+                того чтобы не удерживать транзакцию во время редактирования в формах редактирования,
+                необходимо либо отказаться от DBAware компонентов, либо использовать режим
+                    <varname>CachedUpdates</varname>. Режим <varname>CachedUpdates</varname>
+                позволяет держать транзакцию активной только на очень короткий промежуток времени, а
+                именно на время внесения изменений.</para>
+            <para>При построение отчётных форм, особенно когда выполняется множество запросов,
+                необходимо использовать транзакцию с режимом изолированности SNAPSHOT.</para>
+            <para>Для возможности редактирования набора данных необходимо использовать компонент
+                    <classname>TFDUpdateSQL</classname> и заполнить его свойства
+                    <varname>InsertSQL</varname>, <varname>ModifySQL</varname>,
+                    <varname>DeleteSQL</varname> и <varname>FetchRowSQL</varname>. Эти свойства
+                могут быть сгенерированы мастером, но после этого может потребоваться некоторая
+                правка. </para>
+            <para>Для работы с автоинкрементными первичными ключами существует 2 способа:<itemizedlist>
+                    <listitem>
+                        <para>Предварительное получение значения генератора. Для этого необходимо
+                            установить значение свойств компонента <classname>TFDQuery</classname>
+                            <varname>UpdateOptions.GeneratorName</varname> и
+                                <varname>UpdateOptions.AutoIncFields</varname>.</para>
+                    </listitem>
+                    <listitem>
+                        <para>Получение значения первичного ключа с помощью предложения RETURNING,
+                            которое необходимо дописать в запросе <varname>InsertSQL</varname>. В
+                            этом случае полю необходимо выставить свойства <code>Required =
+                                False</code> и <code>ReadOnly = True</code>, поскольку значение
+                            этого свойства не вносится напрямую. </para>
+                    </listitem>
+                </itemizedlist></para>
+            <para>Более сложную бизнес логику удобно реализовать используя хранимые процедуры.
+                Хранимые процедуры, которые не возвращают данные, удобно выполнять с помощью
+                компонента <classname>TFDCommand</classname>.</para>
+
+            <para>Исходные коды примера приложения вы можете получить по ссылке <link xmlns:xlink="http://www.w3.org/1999/xlink"
+                xlink:href="https://github.com/sim1984/FireDacEx"
+                >https://github.com/sim1984/FireDacEx</link></para>
         </section>
     </section>
 
-    <section xml:id="app-ef-winform">
-        <title>Создание приложений с использованием Entity Framework</title>
+    <section xml:id="app-dotnet-winform">
+        <title>Создание Windows Forms приложений с использованием Entity Framework</title>
 
         <para>В данной главе будет описан процесс создания приложений для СУБД Firebird с
             использованием компонентов доступа Entity Framework и среды Visual Studio 2015. </para>
@@ -4528,27 +4599,26 @@ private void btnDiscount_Click(object sender, EventArgs e) {
                     </figure>
                 </para>
             </section>
-            <section>
-                <title>Заключение</title>
+        </section>
+        <section>
+            <title>Заключение</title>
 
-                <para><link xmlns:xlink="http://www.w3.org/1999/xlink"
-                        xlink:href="http://www.ibase.ru/files/articles/firebird_examples/firebird_example_dot_NET_source.zip"
-                        >Исходные коды примера приложения</link></para>
-                <para><link xmlns:xlink="http://www.w3.org/1999/xlink"
-                        xlink:href="http://www.ibase.ru/files/articles/firebird_examples/firebird_example_database.zip"
-                        >Готовая БД 2.5 и 3.0</link></para>
-                <para><link xmlns:xlink="http://www.w3.org/1999/xlink"
-                        xlink:href="http://www.ibase.ru">www.ibase.ru</link>, <link
-                        xmlns:xlink="http://www.w3.org/1999/xlink"
-                        xlink:href="http://www.ibsurgeon.com">www.ibsurgeon.com</link></para>
-                <para><link xmlns:xlink="http://www.w3.org/1999/xlink"
-                        xlink:href="mailto:support@ibase.ru">support@ibase.ru</link>, <link
-                        xmlns:xlink="http://www.w3.org/1999/xlink"
-                        xlink:href="mailto:support@ib-aid.com">support@ib-aid.com</link></para>
-            </section>
+            <para><link xmlns:xlink="http://www.w3.org/1999/xlink"
+                    xlink:href="http://www.ibase.ru/files/articles/firebird_examples/firebird_example_dot_NET_source.zip"
+                    >Исходные коды примера приложения</link></para>
+            <para><link xmlns:xlink="http://www.w3.org/1999/xlink"
+                    xlink:href="http://www.ibase.ru/files/articles/firebird_examples/firebird_example_database.zip"
+                    >Готовая БД 2.5 и 3.0</link></para>
+            <para><link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="http://www.ibase.ru"
+                    >www.ibase.ru</link>, <link xmlns:xlink="http://www.w3.org/1999/xlink"
+                    xlink:href="http://www.ibsurgeon.com">www.ibsurgeon.com</link></para>
+            <para><link xmlns:xlink="http://www.w3.org/1999/xlink"
+                    xlink:href="mailto:support@ibase.ru">support@ibase.ru</link>, <link
+                    xmlns:xlink="http://www.w3.org/1999/xlink"
+                    xlink:href="mailto:support@ib-aid.com">support@ib-aid.com</link></para>
         </section>
     </section>
-    <section>
+    <section xml:id="app-dotnet-aspnet">
         <title>Создание Web приложений с использованием Entity Framework</title>
 
         <para>В данной главе будет описан процесс создания Web приложений для СУБД Firebird с
@@ -4556,8 +4626,8 @@ private void btnDiscount_Click(object sender, EventArgs e) {
 
         <para>В данной главе обсуждаются особенности создания именно Web приложений, базовые
             принципы работы с Entity Framework и Firebird описаны в предыдущей главе <link
-                linkend="app-ef-winform">«Создание приложений с использованием Entity
-                Framework»</link>.</para>
+                linkend="app-dotnet-winform">Создание приложений с использованием Entity
+                Framework</link>.</para>
         <para>Платформа .NET предоставляет два основных фреймворка для создания web приложений:
             ASP.NET Web Forms и ASP.NET MVC. Я предпочитаю использовать паттерн MVC, поэтому в
             дальнейшем будет описываться именно эта технология.</para>
@@ -7583,7 +7653,7 @@ public class InvoiceController : Controller
                     xlink:href="mailto:support@ib-aid.com">support@ib-aid.com</link></para>
         </section>
     </section>
-    <section>
+    <section xml:id="app-php">
         <title>Создание Web приложений на PHP</title>
 
         <para>В этой главе мы рассмотрим процесс создания web приложения с использованием СУБД
@@ -9837,13 +9907,17 @@ Route::any('/invoice/editline', 'InvoiceController@editInvoiceLine');
                     </mediaobject>
                 </figure>
             </para>
+        </section>
+        <section>
+            <title>Заключение</title>
+
             <para>На этом мой пример закончен. Исходные коды вы можете скачать по ссылке <link
                     xmlns:xlink="http://www.w3.org/1999/xlink"
                     xlink:href="https://github.com/sim1984/phpfbexample"
                     >https://github.com/sim1984/phpfbexample</link>.</para>
         </section>
     </section>
-    <section>
+    <section xml:id="app-java-spring">
         <title>Создание приложений с использованием jOOQ и Spring MVC</title>
 
         <para>В данной главе будет описан процесс создания web приложения на языке Java с
@@ -13988,11 +14062,14 @@ var JqGridInvoice = (function ($, jqGridProductFactory, jqGridCustomerFactory) {
                         </mediaobject>
                     </figure>
                 </para>
-                <para>На этом мой пример закончен. Исходные коды вы можете скачать по ссылке <link
-                        xmlns:xlink="http://www.w3.org/1999/xlink"
-                        xlink:href="https://github.com/sim1984/phpfbexample"
-                        >https://github.com/sim1984/phpfbexample</link>.</para>
             </section>
+        </section>
+        <section>
+            <title>Заключение</title>
+            <para>На этом мой пример закончен. Исходные коды вы можете скачать по ссылке <link
+                    xmlns:xlink="http://www.w3.org/1999/xlink"
+                    xlink:href="https://github.com/sim1984/fbjavaex"
+                    >https://github.com/sim1984/fbjavaex</link>.</para>
         </section>
     </section>
 </chapter>
