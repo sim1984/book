@@ -1,0 +1,727 @@
+<!DOCTYPE chapter>
+<chapter xmlns="http://docbook.org/ns/docbook" version="5.0" xml:id="constraints" xml:lang="ru">
+    <info>
+        <title>Ограничения</title>
+    </info>
+
+    <para>Эта глава посвящена ограничениям базы данных Firebird. Ограничения базы данных,— это
+        правила, которые определяют взаимосвязи между таблицами и могут проверять и изменять данные
+        в базе данных. Реализованы эти правила в виде особых объектов базы данных. </para>
+
+    <para>Главное преимущество использования ограничений состоит в возможности реализовать проверку
+        данных, а значит, и часть бизнес-логики приложения на уровне базы данных, т. е.
+        централизовать и упростить ее, а значит, сделать разработку приложений баз данных проще и
+        надежнее.</para>
+
+    <para>Часто начинающие разработчики пренебрегают использованием ограничений базы данных, считая,
+        что они стесняют возможность творчества. Однако на самом деле такое мнение происходит от
+        недостаточного знания теории и практики проектирования баз данных.</para>
+
+    <para>В то же время наиболее опытные разработчики позволяют себе отказаться от использования
+        некоторых видов ограничений, за счет чего их приложения выигрывают в быстродействии. Опыт
+        высококвалифицированных разработчиков позволяет им очень хорошо понимать работу сервера и
+        точно предсказывать его поведение в сложных случаях, поэтому начинающим программистам
+        Firebird лучше не апеллировать к подобным действиям опытных коллег.</para>
+
+    <para>В рамках данной книги мы не рассматриваем проектирование баз данных, поэтому для получения
+        дополнительной информации по этому вопросу следует обратиться к списку литературы в конце
+        книги. Здесь же мы лишь проведем обзор всех видов ограничений в базе данных Firebird и
+        рассмотрим примеры их применения.</para>
+
+    <section>
+        <title>Виды ограничений в базе данных</title>
+
+        <para>Существуют следующие виды ограничений в базе данных Firebird:<itemizedlist
+                spacing="compact">
+                <listitem>
+                    <para>первичный ключ – PRIMARY KEY;</para>
+                </listitem>
+                <listitem>
+                    <para>уникальный ключ – UNIQUE KEY;</para>
+                </listitem>
+                <listitem>
+                    <para>внешний ключ – FOREIGN KEY;</para>
+                </listitem>
+                <listitem>
+                    <para>проверки – CHECK.</para>
+                </listitem>
+            </itemizedlist></para>
+
+        <para>В предыдущих главах уже упоминались некоторые из этих ограничений, что было необходимо
+            для логичного изложения материала, но теперь мы рассмотрим их синтаксис, применение и
+            реализацию более обстоятельно.</para>
+
+        <para>Ограничения могут быть указаны на уровне столбца («ограничения столбцов») или на
+            уровне таблицы («табличные ограничения»). Ограничения уровня таблицы необходимы, когда
+            ключи (ограничение уникальности, первичный ключ или внешний ключ) должны быть
+            сформированы по нескольким столбцам, или, когда ограничение CHECK включает несколько
+            столбцов, т.е. действует на уровне записи. Синтаксис для некоторых типов ограничений
+            может незначительно отличаться в зависимости от того определяется ограничение на уровне
+            столбца или на уровне таблицы. Синтаксис обоих видов ограничений приведен ниже.
+            <programlisting>
+<replaceable>&lt;col_constraint&gt;</replaceable> ::= 
+  [CONSTRAINT <replaceable>constr_name</replaceable>] 
+  {   UNIQUE [<replaceable>&lt;using_index&gt;</replaceable>] 
+    | PRIMARY KEY [<replaceable>&lt;using_index&gt;</replaceable>] 
+    | REFERENCES <replaceable>other_table</replaceable> [(<replaceable>other_col</replaceable>)]  
+        [ON DELETE { NO ACTION | CASCADE | SET DEFAULT | SET NULL}]
+        [ON UPDATE { NO ACTION | CASCADE | SET DEFAULT | SET NULL}]
+        [<replaceable>&lt;using_index&gt;</replaceable>] 
+    | CHECK (<replaceable>&lt;check_condition&gt;</replaceable>) 
+  }          
+
+<replaceable>&lt;tconstraint&gt;</replaceable> ::= 
+  [CONSTRAINT <replaceable>constr_name</replaceable>] 
+  {   UNIQUE (<replaceable>&lt;col_list&gt;</replaceable>) [<replaceable>&lt;using_index&gt;</replaceable>] 
+    | PRIMARY KEY (<replaceable>&lt;col_list&gt;</replaceable>) [<replaceable>&lt;using_index&gt;</replaceable>] 
+    | FOREIGN KEY (<replaceable>&lt;col_list&gt;</replaceable>) 
+      REFERENCES <replaceable>other_table</replaceable> [(<replaceable>&lt;col_list&gt;</replaceable>)]  
+        [ON DELETE { NO ACTION | CASCADE | SET DEFAULT | SET NULL}] 
+        [ON UPDATE { NO ACTION | CASCADE | SET DEFAULT | SET NULL}] 
+        [<replaceable>&lt;using_index&gt;</replaceable>]
+    | CHECK (<replaceable>&lt;check_condition&gt;</replaceable>) 
+  }    
+
+<replaceable>&lt;col_list&gt;</replaceable> ::= <replaceable>colname</replaceable> [, <replaceable>colname</replaceable> ...]   
+
+<replaceable>&lt;using_index&gt;</replaceable> ::= USING [ASC[ENDING] | DESC[ENDING]] INDEX <replaceable>indexname</replaceable>   
+ </programlisting>
+        </para>
+        <para>Ограничение на уровне столбца указывается после определения других характеристик
+            столбца. Оно может включать только столбец указанный в этом определении.</para>
+        <para>Ограничения на уровне таблицы указываются после определений всех столбцов. Ограничения
+            таблицы являются более универсальным способом записи ограничений, поскольку позволяют
+            ограничение более чем для одного столбца таблицы.</para>
+        <para>Вы можете смешивать ограничения столбцов и ограничения таблиц в одном операторе CREATE
+            TABLE.</para>
+        <para>Для первичного ключа (PRIMARY KEY), уникального ключа (UNIQUE KEY) и внешнего ключа
+            (FOREIGN KEY) Firebird автоматически создаётся индекс.</para>
+        <para>Конечно, у этих двух типов ограничений отличается способ их применения: ограничения на
+            основе одного поля просто дописываются к определению нужного поля, а ограничения на
+            основе нескольких полей указываются через запятую в общем определении таблицы. Подробные
+            примеры приведены в следующих разделах этой главы.</para>
+    </section>
+    <section>
+        <title>Пример типичного ограничения</title>
+        <para>Фактически ограничения на основе одного поля являются частным случаем ограничений на
+            основе нескольких полей. </para>
+        <para>Пример создания ограничения первичного ключа с использованием этих двух различных
+            подходов приведен ниже. Давайте создадим таблицу, содержащую только одно поле и наложим
+            на нее ограничение первичного ключа. </para>
+        <para>Первичный ключ с использованием синтаксиса ограничения на основе одного поля:
+            <programlisting language="sql">
+CREATE TABLE test1(
+  ID_PK  INTEGER CONSTRAINT pktest NOT NULL PRIMARY KEY);        
+        </programlisting>
+        </para>
+        <para>В этом примере создается первичный ключ с именем pktest на поле ID_PK. Получаем весьма
+            компактное описание в одну строчку. </para>
+        <para>Для той же самой цели можно воспользоваться синтаксисом ограничений на основе
+            нескольких полей:
+            <programlisting language="sql">
+CREATE TABLE test2(
+  ID_PK  INTEGER NOT NULL,
+  CONSTRAINT pktst PRIMARY KEY (ID_PK));         
+        </programlisting>
+        </para>
+    </section>
+    <section>
+        <title>Создание ограничений</title>
+
+        <para>Давайте рассмотрим создание ограничений подробнее. Первой в описании общего синтаксиса
+            ограничений идет опция <code>[CONSTRAINT <replaceable>constr_name</replaceable>]</code>.
+            Как видите, эта опция взята в квадратные скобки и, значит, необязательна.</para>
+
+        <para>С помощью этой опции можно задавать имя создаваемому ограничению и в случае
+            использования синтаксиса ограничений на основе одного поля, и в случае ограничений на
+            основе нескольких полей. </para>
+
+        <para>Если не указать имя для ограничения, Firebird автоматически сгенерирует его.
+            Ограничения уровня столбца и их индексы автоматически именуются следующим образом: <itemizedlist>
+                <listitem>
+                    <para>Имена ограничений имеют следующий вид
+                                <database>INTEG_<replaceable>n</replaceable></database>, где
+                            <replaceable>n</replaceable> представлено одним или несколькими
+                        числами;</para>
+                </listitem>
+                <listitem>
+                    <para>Имена индексов имеют вид
+                            <database>RDB$PRIMARY<replaceable>n</replaceable></database> (для
+                        индекса первичного ключа),
+                            <database>RDB$FOREIGN<replaceable>n</replaceable></database> (для
+                        индекса внешнего ключа) или
+                            <database>RDB$<replaceable>n</replaceable></database> (для индекса
+                        уникального ключа), где <replaceable>n</replaceable> представлено одним или
+                        несколькими числами;</para>
+                </listitem>
+            </itemizedlist></para>
+        <para>Схемы автоматического формирования имён для ограничений уровня таблицы и их индексов
+            одинаковы.</para>
+        <para>Имя ограничения можно задать явно, если указать его в необязательном предложении
+                <database>CONSTRAINT</database>. По умолчанию имя индекса ограничения будет тем же
+            самым, что и самого ограничения. Если для индекса необходимо задать другое имя, то его
+            можно указать в предложении <database>USING</database>.</para>
+        <tip>
+            <para>Настоятельно рекомендуем явно назначать имя создаваемому ограничению. Это позволит
+                улучшить читабельность схемы базы данных, а также упростить управление ограничениями
+                в дальнейшем.</para>
+        </tip>
+
+        <para>Предложение <database>USING</database> позволяет задать определённое пользователем имя
+            автоматически создаваемого индекса для ограничения, и опционально определить, какой это
+            будет индекс — по возрастанию (по умолчанию) или по убыванию.</para>
+
+        <para>Назначив имя ограничению, необходимо определить его тип. Рассмотрим различные типы
+            ограничений в том порядке, как они указаны в описании общего синтаксиса
+            ограничений.</para>
+    </section>
+    <section>
+        <title>Первичный и уникальный ключи</title>
+
+        <para>Первичные ключи являются одним из основных видов ограничений в базе данных. Они
+            применяются для однозначной идентификации записей в таблице. Допустим, мы храним в базе
+            данных список людей. Вполне вероятно, что могут появиться два (или больше) человека с
+            одинаковыми фамилией, именем и отчеством. Как же гарантированно отличить одного человека
+            от другого (конечно, речь идет о том, чтобы отличить одного человека от другого на
+            основании информации, хранящейся в базе данных)?</para>
+
+        <para>В данном случае "человек" представлен одной записью в таблице, поэтому можно задаться
+            более общим вопросом – как отличить одну запись в (любой) таблице от другой записи в
+            этой же таблице. Для этого используются ограничения — первичные ключи. Первичный ключ
+            представляет собой одно или несколько полей в таблице, сочетание которых уникально для
+            каждой записи. Для одной таблицы не существует повторяющихся значений первичного
+            ключа.</para>
+
+        <para>Уникальные ключи несут аналогичную нагрузку — они также служат для однозначной
+            идентификации записей в таблице. Отличие первичных ключей от уникальных состоит в том,
+            что первичный ключ может быть в таблице только один, а уникальных ключей – несколько.
+            Надо отметить, что и первичный и уникальный ключ могут быть использованы в качестве
+            ссылочной основы для внешних ключей (см. далее). </para>
+
+        <note>
+            <para>Формальное описание понятий первичного и уникального ключей, а также других важных
+                определений можно найти в приложении "Глоссарий" в конце книги.</para>
+        </note>
+
+        <para>Синтаксис создания первичного и уникального ключа на уровне столбца таблицы следующий:
+            <programlisting>
+ <replaceable>&lt;pkuk_constraint&gt;</replaceable> ::= 
+  [CONSTRAINT <replaceable>constr_name</replaceable>] 
+  {PRIMARY KEY | UNIQUE} [<replaceable>&lt;using_index&gt;</replaceable>] 
+            
+<replaceable>&lt;using_index&gt;</replaceable> ::= USING [ASC[ENDING] | DESC[ENDING]] INDEX <replaceable>indexname</replaceable>              
+        </programlisting>
+        </para>
+        <para>Примеры первичных и уникальных ключей:
+            <programlisting language="sql">
+CREATE TABLE example(
+  id INTEGER NOT NULL PRIMARY KEY,  /*первичный ключ*/
+  name VARCHAR(50) NOT NULL UNIQUE, /*уникальный ключ */
+  anumber INTEGER CONSTRAINT uk_example UNIQUE   /* именованный уникальный ключ */
+);           
+            </programlisting>
+        </para>
+        <para>Синтаксис создания первичного и уникального ключей на уровне таблицы:
+            <programlisting>
+<replaceable>&lt;pkuk_constraint_t&gt;</replaceable> ::= 
+  [CONSTRAINT <replaceable>constr_name</replaceable>] 
+  {PRIMARY KEY | UNIQUE} (<replaceable>&lt;col_list&gt;</replaceable>) [<replaceable>&lt;using_index&gt;</replaceable>]  
+            
+<replaceable>&lt;col_list&gt;</replaceable> ::= <replaceable>colname</replaceable> [, <replaceable>colname</replaceable> ...]   
+            
+<replaceable>&lt;using_index&gt;</replaceable> ::= USING [ASC[ENDING] | DESC[ENDING]] INDEX <replaceable>indexname</replaceable>              
+        </programlisting>
+        </para>
+        <para>Такой синтаксис позволяет создавать ключи на основе комбинации полей. Вот примеры
+            создания первичных и уникальных ключей из нескольких полей:
+            <programlisting language="sql">
+CREATE TABLE example2(
+  ANumber INTEGER NOT NULL,
+  Name VARCHAR(50) NOT NULL,
+  Quantity INTEGER NOT NULL,
+  Cost NUMERIC(15,4) NOT NULL,
+  CONSTRAINT pkt PRIMARY KEY (ANumber, Name), /*первичный ключ pkt на основе двух полей*/
+  CONSTRAINT ukt1 UNIQUE (Quantity, Cost)); /*уникальный ключ ukt1 на основе двух полей*/         
+            </programlisting>
+        </para>
+        <para>Обратите внимание, что все поля, входящие в состав первичного ключа, должны быть
+            объявлены как NOT NULL, так как эти ключи не могут иметь неопределенного
+            значения.</para>
+        <para>Согласно стандарту SQL-99 Firebird допускает одно или более значений NULL в столбце на
+            который наложено ограничение <database>UNIQUE</database>. Это позволяет определить
+            ограничение <database>UNIQUE</database> на столбцах, которые не имеют ограничения
+                <database>NOT NULL</database>.</para>
+        <para>Для уникальных ключей, содержащих несколько столбцов, логика немного сложнее:</para>
+        <para>
+            <itemizedlist spacing="compact">
+                <listitem>
+                    <para>Разрешено множество записей со значением NULL во всех столбцах
+                        ключа;</para>
+                </listitem>
+                <listitem>
+                    <para>Разрешено множество записей с различными комбинациями null и not-null
+                        значений в ключах;</para>
+                </listitem>
+                <listitem>
+                    <para>Разрешено множество записей, в которых в одном из столбцов уникального
+                        ключа содержится значение NULL, а остальные столбцы заполнены значениями и
+                        эти значения различны хотя бы в одном из них;</para>
+                </listitem>
+                <listitem>
+                    <para>Разрешено множество записей, в которых в одном из столбцов уникального
+                        ключа содержится значение NULL, а остальные столбцы заполнены значениями, и
+                        эти значения имеют совпадения хотя бы в одном из них.</para>
+                </listitem>
+            </itemizedlist>
+        </para>
+        <para>Это можно резюмировать следующим примером:
+            <programlisting language="sql">
+RECREATE TABLE t( x INT, y INT, z INT, UNIQUE(x,y,z));
+INSERT INTO t VALUES( NULL, 1, 1 );
+INSERT INTO t VALUES( NULL, NULL, 1 );
+INSERT INTO t VALUES( NULL, NULL, NULL );
+INSERT INTO t VALUES( NULL, NULL, NULL ); -- Разрешено
+INSERT INTO t VALUES( NULL, NULL, 1 );    -- Запрещено                    
+                </programlisting>
+        </para>
+
+        <para>По умолчанию для всех ключей создаётся индекс с ключами в восходящей
+            последовательности (ASCENDING). Если вам требуется чтобы ключ использовал индекс с
+            нисходящей последовательностью ключей вы можете воспользоваться предложением <code>USING
+                [ASC[ENDING] | DESC[ENDING]] INDEX</code> в определении первичного, уникального или
+            внешнего ключа. Следует помнить, что если вы используете DESCENDING индекс в первичном
+            или уникальном ключе главной таблицы, то должны использовать DESCENDING индекс во
+            внешних ключах подчинённых таблиц, ссылающихся на эту таблицу.</para>
+
+        <para>Помимо создания ограничения первичных и уникальных ключей в момент создания таблицы,
+            имеется возможность добавлять ограничения в уже существующую таблицу. Для этого
+            используется предложение DDL: ALTER TABLE. Синтаксис добавления ограничений первичного
+            или уникального ключа в существующую таблицу аналогичен описанному выше:
+            <programlisting>
+ALTER TABLE <replaceable>tablename</replaceable> 
+ADD [CONSTRAINT <replaceable>constr_name</replaceable>] 
+{PRIMARY KEY | UNIQUE} (<replaceable>&lt;col_list&gt;</replaceable>) [<replaceable>&lt;using_index&gt;</replaceable>]  
+            
+<replaceable>&lt;col_list&gt;</replaceable> ::= <replaceable>colname</replaceable> [, <replaceable>colname</replaceable> ...]   
+            
+<replaceable>&lt;using_index&gt;</replaceable> ::= USING [ASC[ENDING] | DESC[ENDING]] INDEX <replaceable>indexname</replaceable>              
+        </programlisting>
+        </para>
+        <para>Давайте рассмотрим пример создания первичного и уникального ключа с помощью ALTER
+            TABLE. Сначала создаем таблицу:
+            <programlisting language="sql">
+CREATE TABLE pkalter(
+  ID1 INTEGER NOT NULL, 
+  ID2 INTEGER NOT NULL, 
+  UID VARCHAR(24));        
+            </programlisting>
+        </para>
+        <para>Затем добавляем ключи. Сначала первичный:
+            <programlisting language="sql">
+ALTER TABLE pkalter
+ADD CONSTRAINT pkal1 PRIMARY KEY (id1, id2);     
+            </programlisting>
+        </para>
+        <para>Затем уникальный ключ:
+            <programlisting language="sql">
+ALTER TABLE pkalter
+ADD CONSTRAINT ukal UNIQUE (uid);    
+            </programlisting>
+        </para>
+        <para>Важно отметить, что добавление (а также удаление) ограничений первичных и уникальных
+            ключей к таблице может производить только владелец этой таблицы, пользователь с
+            привилегией ALTER ANY TABLE или администратор базы данных (подробнее о владельцах и
+            пользователе SYSDBA см. главу "Безопасность в Firebird: пользователи, роли и
+            права").</para>
+    </section>
+    <section>
+        <title>Внешние ключи</title>
+
+        <para>Следующим ограничением, которое часто используется в базах данных Firebird, является
+            ограничение внешнего ключа. Это очень мощное средство для поддержания ссылочной
+            целостности в базе данных, которое позволяет не только контролировать наличие правильных
+            ссылок в базе данных, но и автоматически управлять этими ссылками!</para>
+
+        <para>Смысл создания внешнего ключа следующий: если две таблицы служат для хранения
+            взаимосвязанной информации, то необходимо гарантировать, чтобы эта взаимосвязь была
+            всегда корректной. Пример — документ "накладная", содержащий общий заголовок (дата,
+            номер накладной и т. д.) и множество подробных записей (наименование товара, количество
+            и т. д.). </para>
+
+        <para>Для хранения такого документа в базе данных создается две таблицы — одна для хранения
+            заголовков накладных, а вторая — для хранения содержимого накладной — записей о товарах
+            и их количестве. Такие таблицы называются <emphasis role="italic">главной</emphasis> и
+                <emphasis role="italic">подчиненной</emphasis> или <emphasis role="italic"
+                >таблицей-мастером</emphasis> и <emphasis role="italic"
+            >деталь-таблицей</emphasis>.</para>
+
+        <para>Согласно здравому смыслу невозможно существование содержимого накладной без наличия ее
+            заголовка. Другими словами, мы не можем вставлять записи о товарах, не создав заголовок
+            накладной, а также не можем удалять запись заголовка, если существуют записи о
+            товарах.</para>
+
+        <para>Для реализации такого поведения таблица заголовка соединяется с таблицей подробностей
+            с помощью ограничения внешнего ключа. </para>
+
+        <para>Давайте рассмотрим смысл наложения ограничений внешнего ключа на примере таблиц,
+            содержащих информацию о накладных. </para>
+
+        <para>Для этого создадим две таблицы для хранения накладной — таблицу TITLE для хранения
+            заголовка и таблицу INVENTORY для хранения информации о товарах, входящих в накладную.
+            <programlisting language="sql">
+CREATE TABLE TITLE(
+  ID_TITLE INTEGER NOT NULL PRIMARY KEY,
+  TitleDate DATE,
+  ANumber INTEGER,
+  Note VARCHAR(255));        
+        </programlisting>
+        </para>
+        <para>Обратите внимание на то, что мы сразу определили первичный ключ в таблице заголовка на
+            основе поля ID_TITLE. Остальные поля таблицы TITLE содержат тривиальную информацию о
+            заголовке накладной — дату, номер, примечание.</para>
+        <para>Теперь определим таблицу для хранения информации о товарах, входящих в накладную:
+            <programlisting language="sql">
+CREATE TABLE INVENTORY(
+  ID_INVENTORY INTEGER NOT NULL PRIMARY KEY,
+  FK_TITLE INTEGER NOT NULL,
+  ProductName VARCHAR (255),
+  Quantity NUMERIC(18, 0),
+  APosition INTEGER);       
+        </programlisting>
+        </para>
+        <para>Давайте рассмотрим, какие поля входят в таблицу INVENTORY. Во-первых, это ID_INVENTORY
+            — первичный ключ этой таблицы. Затем идет целочисленное поле FK_TITLE, которое служит
+            для ссылки на идентификатор заголовка ID_TITLE в таблице заголовков накладных. Далее
+            идут поля ProductName, Quantity и APosition, описывающие наименование товара, его
+            количество и позицию в накладной.</para>
+        <para>Для нашего примера важнее всего поле FK_TITLE. Если мы захотим вывести информацию о
+            товарах определенной накладной, то нам следует воспользоваться следующим запросом, в
+            котором параметр ID_TITLE определяет идентификатор заголовка:
+            <programlisting language="sql">
+SELECT *
+FROM INVENTORY I1
+WHERE I1.FK_TITLE= :ID_TITLE    
+        </programlisting>
+        </para>
+        <para>В сущности, в описываемой ситуации ничто не мешает заполнить таблицу INVENTORY
+            записями, ссылающимися на несуществующие записи в таблице TITLE. Также ничего не
+            препятствует удалению заголовка уже существующей накладной, в результате чего записи о
+            товарах могут стать "бесхозными".</para>
+        <para>Сервер не будет препятствовать всем этим вставкам и удалениям. Таким образом, контроль
+            за целостностью данных в базе данных полностью возлагается на клиентское приложение. А
+            ведь с одной базой данных могут работать несколько приложений, разрабатываемых, быть
+            может, разными программистами, что может привести к различной интерпретации данных и к
+            ошибкам.</para>
+        <para>Поэтому необходимо явно наложить ограничение на то, что в таблицу INVENTORY могут
+            помещаться лишь такие записи о товарах, которые имеют корректную ссылку на заголовок
+            накладной. Собственно это и есть ограничение <emphasis role="italic">внешнего
+                ключа</emphasis>, которое позволяет вставлять в поля, входящие в ограничения, только
+            те значения, которые есть в другой таблице.</para>
+
+        <para>Такое ограничение можно организовать с помощью внешнего ключа. Для данного примера
+            необходимо наложить ограничения внешнего ключа на поле FK_TITLE и связать его с
+            первичным ключом ID_TITLE в TITLE. Добавить внешний ключ в уже существующую таблицу
+            можно следующей командой:
+            <programlisting language="sql">
+ALTER TABLE INVENTORY
+ADD CONSTRAINT fktitle FOREIGN KEY(FK_TITLE) REFERENCES TITLE(ID_TITLE) 
+        </programlisting>
+        </para>
+        <note>
+            <para>Часто при добавлении внешнего ключа возникает ошибка object is in use (объект
+                используется). Это обозначает что один из пользователей обратился к модифицируемой
+                таблице. Чтобы этого избежать необходимо либо открыть базу данных в монопольном
+                режиме — чтобы одновременно не было других пользователей, либо добавлять внешний
+                ключ в транзакции с опцией WAIT. </para>
+        </note>
+        <para>Здесь INVENTORY — имя таблицы, на которую накладывается ограничение внешнего ключа;
+            fktitle — имя внешнего ключа; FK_TITLE — поля, составляющие внешний ключ; TITLE — имя
+            таблицы, предоставляющей значения (ссылочную основу) для внешнего ключа; ID_TITLE — поля
+            первичного или уникального ключа в таблице TITLE которые являются ссылочной основой для
+            внешнего ключа.</para>
+        <para>Полный синтаксис ограничения внешнего ключа приведен ниже:
+            <programlisting>
+<replaceable>&lt;col_constraint&gt;</replaceable> ::= 
+  [CONSTRAINT <replaceable>constr_name</replaceable>] REFERENCES <replaceable>other_table</replaceable> [(<replaceable>other_col</replaceable>)]  
+  [ON DELETE { NO ACTION | CASCADE | SET DEFAULT | SET NULL}]
+  [ON UPDATE { NO ACTION | CASCADE | SET DEFAULT | SET NULL}]
+  [<replaceable>&lt;using_index&gt;</replaceable>] 
+        
+<replaceable>&lt;tconstraint&gt;</replaceable> ::= 
+  [CONSTRAINT <replaceable>constr_name</replaceable>] FOREIGN KEY (<replaceable>&lt;col_list&gt;</replaceable>) 
+  REFERENCES <replaceable>other_table</replaceable> [(<replaceable>&lt;col_list&gt;</replaceable>)]  
+  [ON DELETE { NO ACTION | CASCADE | SET DEFAULT | SET NULL}] 
+  [ON UPDATE { NO ACTION | CASCADE | SET DEFAULT | SET NULL}] 
+  [<replaceable>&lt;using_index&gt;</replaceable>]
+
+<replaceable>&lt;col_list&gt;</replaceable> ::= <replaceable>colname</replaceable> [, <replaceable>colname</replaceable> ...]   
+
+<replaceable>&lt;using_index&gt;</replaceable> ::= USING [ASC[ENDING] | DESC[ENDING]] INDEX <replaceable>indexname</replaceable>   
+ </programlisting>
+        </para>
+        <para>Как видите, определения содержат большой набор опций. Для начала давайте рассмотрим
+            базовое определение внешнего ключа, которое наиболее часто используется в реальных базах
+            данных, а затем разберем возможные опции.</para>
+        <para>Определение внешнего ключа на уровне столбца включает в себя ссылку на главную таблицу
+                <replaceable>other_table</replaceable> и её столбец первичного или уникального ключа
+                <replaceable>other_col</replaceable>. Такая форма встречается довольно редко.</para>
+
+        <para>Пример такого определения при создании таблицы:
+            <programlisting language="sql">
+CREATE TABLE Inventory2(
+…
+  FK_TABLE INTEGER NOT NULL CONSTRAINT fkinv REFERENCES 
+  TITLE(ID_TITLE)
+…);       
+       </programlisting>
+        </para>
+        <para>Обратите внимание, что в этом определении опущены ключевые слова FOREIGN KEY, а также
+            подразумевается, что в качестве внешнего ключа будет использоваться единственное поле —
+            FK_TITLE. </para>
+        <para>А в следующем примере приведена более полная форма создания внешнего ключа
+            одновременно с таблицей, которая используется наиболее часто:
+            <programlisting language="sql">
+CREATE TABLE Inventory2(
+…
+  FK_TABLE INTEGER NOT NULL,
+  CONSTRAINT fkinv FOREIGN KEY (FK_TABLE) REFERENCES 
+  TITLE(ID_TITLE)
+…);        
+        </programlisting>
+        </para>
+
+        <para>По умолчанию для всех ключей создаётся индекс с ключами в восходящей
+            последовательности (ASCENDING). Если вам требуется чтобы ключ использовал индекс с
+            нисходящей последовательностью ключей вы можете воспользоваться предложением <code>USING
+                [ASC[ENDING] | DESC[ENDING]] INDEX</code> в определении первичного, уникального или
+            внешнего ключа. Следует помнить, что если вы используете DESCENDING индекс в первичном
+            или уникальном ключе главной таблицы, то должны использовать DESCENDING индекс во
+            внешних ключах подчинённых таблиц, ссылающихся на эту таблицу.</para>
+
+        <para>Помимо создания ограничения внешнего ключа в момент создания таблицы, имеется
+            возможность добавлять ограничения в уже существующую таблицу. Для этого используется
+            предложение DDL: ALTER TABLE. Синтаксис добавления ограничения внешнего ключа в
+            существующую таблицу аналогичен описанному выше:
+            <programlisting>
+ALTER TABLE <replaceable>tablename</replaceable>
+ADD [CONSTRAINT <replaceable>constr_name</replaceable>] FOREIGN KEY (<replaceable>&lt;col_list&gt;</replaceable>) 
+  REFERENCES <replaceable>other_table</replaceable> [(<replaceable>&lt;col_list&gt;</replaceable>)]  
+  [ON DELETE { NO ACTION | CASCADE | SET DEFAULT | SET NULL}] 
+  [ON UPDATE { NO ACTION | CASCADE | SET DEFAULT | SET NULL}] 
+  [<replaceable>&lt;using_index&gt;</replaceable>]
+
+<replaceable>&lt;col_list&gt;</replaceable> ::= <replaceable>colname</replaceable> [, <replaceable>colname</replaceable> ...]   
+
+<replaceable>&lt;using_index&gt;</replaceable> ::= USING [ASC[ENDING] | DESC[ENDING]] INDEX <replaceable>indexname</replaceable>              
+        </programlisting>
+        </para>
+        <para>Добавление ограничений после создания таблицы с помощью оператора ALTER TABLE
+            используется наиболее часто, поскольку позволяет разрешить взаимозависимости. Пример
+            добавления внешнего ключа с помощью оператора ALTER TABLE приведён ниже.
+            <programlisting language="sql">
+ALTER TABLE Inventory2
+ADD CONSTRAINT fkinv FOREIGN KEY (FK_TABLE) 
+REFERENCES TITLE(ID_TITLE);        
+        </programlisting>
+        </para>
+        <section>
+            <title>Использование NULL в полях внешнего ключа</title>
+
+            <para>Столбцы внешнего ключа не требуют ограничения NOT NULL.</para>
+            <para>Эту возможность можно использовать для разрешения взаимных ссылок. Например, если
+                есть две таблицы, ссылающиеся друг на друга с помощью внешних ключей. Если не
+                разрешить пустую ссылку (т. е. на NULL) в этих внешних ключах, то в связанные
+                таблицы невозможно будет добавить ни одной записи: чтобы добавить запись в первую
+                таблицу, надо будет иметь запись во второй таблице, и наоборот.</para>
+
+            <para>Использование NULL в качестве пустой ссылки позволяет организовать взаимные ссылки
+                двух перекрестно ссылающихся таблиц, а также хранить иерархические структуры в
+                реляционных таблицах — при этом корневые узлы ссылаются на "пустые" записи (т. е.
+                просто содержат NULL).</para>
+        </section>
+        <section>
+            <title>Расширенные возможности поддержки ссылочной целостности с помощью внешнего
+                ключа</title>
+
+            <para>Обычно вполне достаточно декларативного варианта ограничения внешнего ключа, при
+                котором сервер только следит за тем, чтобы в таблицу с внешним ключом нельзя было
+                вставить некорректные значения или – при попытке сделать это возникает ошибка. Но
+                Firebird позволяет выполнять ряд автоматических действий при изменении/удалении
+                внешнего ключа. Для этого служит следующий набор опций внешнего ключа:
+                <programlisting>
+[ON DELETE { NO ACTION | CASCADE | SET DEFAULT | SET NULL}]
+[ON UPDATE { NO ACTION | CASCADE | SET DEFAULT | SET NULL}]            
+            </programlisting>
+            </para>
+            <para>Эти опции позволяют определить различные действия при изменении или удалении
+                значения внешнего ключа. </para>
+            <para>Например, мы можем указать, что при удалении первичного ключа в таблице-мастере
+                необходимо удалять все записи с таким же внешним ключом в подчиненной таблице. Для
+                этого следует так определить внешний ключ:
+                <programlisting language="sql">
+ALTER TABLE INVENTORY
+  ADD CONSTRAINT fkautodel 
+  FOREIGN KEY (FK_TITLE) REFERENCES TITLE(ID_TITLE)
+  ON DELETE CASCADE               
+            </programlisting>
+            </para>
+            <para>Фактически для реализации этих действий создается системный триггер, который и
+                выполняет определенные действия. В таблице приведено описание происходящих действий
+                при различных опциях (обратите внимание, что опции NO ACTION|CASCADE|SET DEFAULT|SET
+                NULL не могут использоваться совместно в одном предложении ON XXX).</para>
+            <para>
+                <table xml:id="types-tbl-charindxsz" frame="all">
+                    <?dbfo keep-together='auto'?>
+                    <title>Действия по поддержанию ссылочной целостности при различных
+                        опциях</title>
+                    <tgroup cols="5">
+                        <colspec colname="colAction" colnum="1" colwidth="1*" align="center"/>
+                        <colspec colname="col1B" colnum="2" colwidth="1*" align="center"/>
+                        <colspec colname="col2B" colnum="3" colwidth="1*" align="center"/>
+                        <colspec colname="col3B" colnum="4" colwidth="1*" align="center"/>
+                        <colspec colname="col4B" colnum="5" colwidth="1*" align="center"/>
+                        <thead>
+                            <row>
+                                <entry morerows="1">Событие</entry>
+                                <entry namest="col1B" nameend="col4B">Действие</entry>
+                            </row>
+                            <row>
+                                <entry>NO ACTION</entry>
+                                <entry>CASCADE</entry>
+                                <entry>SET DEFAULT</entry>
+                                <entry>SET NULL</entry>
+                            </row>
+                        </thead>
+                        <tbody>
+                            <row>
+                                <entry>ON DELETE</entry>
+                                <entry>При удалении внешнего ключа ничего не делать — используется
+                                    по умолчанию</entry>
+                                <entry>При удалении удалить все связанные записи из подчиненной
+                                    таблицы</entry>
+                                <entry>При изменении установить поле внешнего ключа в значение по
+                                    умолчанию </entry>
+                                <entry>При изменении установить поле внешнего ключа в NULL</entry>
+                            </row>
+                            <row>
+                                <entry>ON UPDATE</entry>
+                                <entry>При изменении ничего не делать — используется по
+                                    умолчанию</entry>
+                                <entry>При изменении записи изменить во всех связанных записях в
+                                    подчиненных таблицах</entry>
+                                <entry>При удалении установить поле внешнего ключа в значение по
+                                    умолчанию</entry>
+                                <entry>При удалении установить поле внешнего ключа в NULL</entry>
+                            </row>
+                        </tbody>
+                    </tgroup>
+                </table>
+            </para>
+            <para>Если мы ничего не указываем или указываем NO ACTION, то при попытки модификации
+                полей входящих в первичный ключ (удалении записи) будет сгенерирована ошибка. Если
+                вам требуется другое поведение, то необходимо позаботиться об изменении внешнего
+                ключа (в случае изменения первичного) самостоятельно, а при удалении первичного
+                ключа предварительно удалить записи из подчиненной таблицы.</para>
+            <important>
+                <para>Осторожно надо обращаться с опцией CASCADE: неосторожное ее использование
+                    может привести к удалению большого количества связанных записей.</para>
+            </important>
+        </section>
+    </section>
+    <section>
+        <title>Ограничение CHECK</title>
+
+        <para>Одним из наиболее полезных ограничений в базе данных является ограничение проверки.
+            Идея его очень проста — проверять вставляемое в таблицу значение на какое-либо условие
+            и, в зависимости от выполнения условия, добавлять (обновлять) запись или нет.</para>
+
+        <para>Синтаксис его достаточно прост:
+            <programlisting>
+<replaceable>&lt;constraint&gt;</replaceable> ::= 
+  [CONSTRAINT <replaceable>constr_name</replaceable>] CHECK (<replaceable>&lt;check_condition&gt;</replaceable>)       
+        </programlisting>
+        </para>
+        <para>Здесь <replaceable>constr_name</replaceable> — имя ограничения;
+                <replaceable>&lt;check_condition&gt;</replaceable> — условие проверки, в котором в
+            качестве параметра может участвовать вставляемое/изменяемое значение. Если условие
+            проверки выполняется, то вставка/изменение этого значения разрешаются, если нет —
+            возникает ошибка.</para>
+        <para>Самый простой пример проверки:
+            <programlisting language="sql">
+CREATE TABLE checktst(
+  id INTEGER CHECK (id > 0)
+);    
+        </programlisting>
+        </para>
+        <para>Эта проверка устанавливает, больше ли нуля вставляемое/изменяемое значение поля ID, и
+            в зависимости от результата позволяет вставить/изменить новое значение или возбудить
+            исключение (см. главу "Расширенные возможности языка хранимых процедур
+            Firebird").</para>
+        <para>Полный синтаксис условия проверки следующий:
+            <programlisting>
+<replaceable>&lt;check_condition&gt;</replaceable> ::= { 
+    <replaceable>&lt;val&gt;</replaceable> <replaceable>&lt;operator&gt;</replaceable> <replaceable>&lt;val&gt;</replaceable> 
+  | <replaceable>&lt;val&gt;</replaceable> [NOT] BETWEEN <replaceable>&lt;val&gt;</replaceable> AND <replaceable>&lt;val&gt;</replaceable> 
+  | <replaceable>&lt;val&gt;</replaceable> [NOT] IN (<replaceable>&lt;val&gt;</replaceable> [, <replaceable>&lt;val&gt;</replaceable> ...] | <replaceable>&lt;select_list&gt;</replaceable>) 
+  | <replaceable>&lt;val&gt;</replaceable> IS [NOT] NULL 
+  | <replaceable>&lt;val&gt;</replaceable> IS [NOT] DISTINCT <replaceable>&lt;val&gt;</replaceable> 
+  | <replaceable>&lt;val&gt;</replaceable> [NOT] CONTAINING <replaceable>&lt;val&gt;</replaceable> 
+  | <replaceable>&lt;val&gt;</replaceable> [NOT] STARTING [WITH] <replaceable>&lt;val&gt;</replaceable> 
+  | <replaceable>&lt;val&gt;</replaceable> [NOT] LIKE <replaceable>&lt;val&gt;</replaceable> [ESCAPE <replaceable>&lt;val&gt;</replaceable>] 
+  | <replaceable>&lt;val&gt;</replaceable> [NOT] SIMILAR TO <replaceable>&lt;val&gt;</replaceable> [ESCAPE <replaceable>&lt;val&gt;</replaceable>] 
+  | <replaceable>&lt;val&gt;</replaceable> <replaceable>&lt;operator&gt;</replaceable> {ALL | SOME | ANY} (<replaceable>&lt;select_list&gt;</replaceable>) 
+  | [NOT] EXISTS (<replaceable>&lt;select_expr&gt;</replaceable>) 
+  | [NOT] SINGULAR (<replaceable>&lt;select_expr&gt;</replaceable>)   
+  | (<replaceable>&lt;check_condition&gt;</replaceable>)   
+  | NOT <replaceable>&lt;check_condition&gt;</replaceable>   
+  | <replaceable>&lt;check_condition&gt;</replaceable> OR <replaceable>&lt;check_condition&gt;</replaceable>   
+  | <replaceable>&lt;check_condition&gt;</replaceable> AND <replaceable>&lt;check_condition&gt;</replaceable> 
+}    
+        </programlisting>
+        </para>
+        <para>На уровне столбца выражение в предложении <database>CHECK</database> ссылается на
+            входящее значение с помощью ключевого слова <database>VALUE</database>, так же как
+            предложение <database>CHECK</database> в определении домена. На уровне таблицы выражение
+            в предложении <database>CHECK</database> ссылается на входящее значение по
+            идентификатору столбца. </para>
+        <para>Таким образом, CHECK предоставляет большой набор опций для проверки
+            вставляемых/изменяемых значений. Необходимо помнить о следующих ограничениях в
+            использовании CHECK: <itemizedlist>
+                <listitem>
+                    <para>Данные в CHECK берутся только из текущей записи. Не следует брать данные
+                        для выражения в CHECK из других записей этой же таблицы – они могут быть
+                        изменены другими пользователями;</para>
+                </listitem>
+                <listitem>
+                    <para>Поле может иметь только одно ограничение CHECK, но ограничений на
+                        несколько уровня таблицы может быть несколько;</para>
+                </listitem>
+                <listitem>
+                    <para>Если для описания поля использовался домен, который имеет доменное
+                        ограничение CHECK, то его нельзя переопределить на уровне конкретного поля в
+                        таблице. В этом случае выражение в CHECK столбца таблицы лишь дополняет
+                        условие проверки, которое может уже быть определено в домене.</para>
+                </listitem>
+            </itemizedlist></para>
+        <para>Надо сказать, что CHECK реализованы при помощи системных триггеров, поэтому следует
+            быть осторожным в использовании очень больших условий, которые могут сильно замедлить
+            процессы вставки и обновления записей</para>
+    </section>
+    <section>
+        <title>Удаление ограничений</title>
+
+        <para>Часто приходится удалять различные ограничения по самым разным причинам. Чтобы удалить
+            ограничение, необходимо воспользоваться предложением ALTER TABLE следующего вида:
+            <programlisting language="sql">
+ALTER TABLE <replaceable>tablename</replaceable>
+DROP CONSTRAINT <replaceable>constraintname</replaceable>
+</programlisting>
+            где <replaceable>constraintname</replaceable> – имя ограничения, которое следует
+            удалять. Если при создании ограничения было задано какое-то имя, то следует им
+            воспользоваться, а если нет, то надо открыть какое-либо средство администрирования
+            Firebird, поискать все связанные с ним ограничения и выяснить, какое системное имя
+            сгенерировал Firebird для искомого ограничения. </para>
+        <para>Надо отметить, что удалять ограничения может только владелец таблицы. пользователь с
+            правами ALTER ANY TABLE или администратор базы данных.</para>
+    </section>
+</chapter>

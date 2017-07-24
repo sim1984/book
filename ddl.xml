@@ -1,0 +1,19 @@
+<!DOCTYPE part>
+<part xmlns="http://docbook.org/ns/docbook" version="5.0" xml:id="ddl" xml:lang="ru"
+    xmlns:xi="http://www.w3.org/2001/XInclude">
+    <info>
+        <title>Объекты базы данных (метаданные)</title>
+    </info>
+
+    <partintro>
+        <para>Data Definition Language (DDL) — язык описания данных. С помощью этого подмножества
+            языка создаются, модифицируются и удаляются объекты базы данных (т.е. Метаданные).
+        </para>
+    </partintro>
+
+    <xi:include href="tables.xml" xpointer="element(/1)"/>
+    <xi:include href="indexes.xml" xpointer="element(/1)"/>
+    <xi:include href="constraints.xml" xpointer="element(/1)"/>
+    <xi:include href="sequences.xml" xpointer="element(/1)"/>
+    <xi:include href="views.xml" xpointer="element(/1)"/>
+</part>

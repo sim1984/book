@@ -1,0 +1,39 @@
+<!DOCTYPE part>
+<part xmlns="http://docbook.org/ns/docbook" version="5.0" xml:id="fb-extensions" xml:lang="ru"
+    xmlns:xi="http://www.w3.org/2001/XInclude">
+    <info>
+        <title>Расширение возможностей Firebird</title>
+    </info>
+    
+    <chapter>
+        <info>
+            <title>Написание UDF</title>
+        </info>
+        
+        <para/>
+    </chapter>
+    
+    <chapter>
+        <info>
+            <title>Структура плагинов Firebird 3.0</title>
+        </info>
+        
+        <para/>
+    </chapter>
+    
+    <chapter>
+        <info>
+            <title>Написание UDR (внешних ХП, функций, триггеров) на Delphi/C++</title>
+        </info>
+        
+        <para/>
+    </chapter>    
+    
+    <chapter>
+        <info>
+            <title>Написание UDR на Java</title>
+        </info>
+        
+        <para/>
+    </chapter>     
+</part>

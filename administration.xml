@@ -1,0 +1,18 @@
+<!DOCTYPE part>
+<part xmlns="http://docbook.org/ns/docbook" version="5.0" xml:id="administration" xml:lang="ru"
+    xmlns:xi="http://www.w3.org/2001/XInclude">
+    <info>
+        <title>Администрирование</title>
+    </info>
+
+    <chapter>
+        <info>
+            <title>Установка Firebird на различные платформы</title>
+        </info>
+
+        <para/>
+    </chapter>
+
+    <xi:include href="config.xml" xpointer="element(/1)"/>
+
+</part>

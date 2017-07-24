@@ -1,0 +1,1967 @@
+<!DOCTYPE chapter>
+<chapter xmlns="http://docbook.org/ns/docbook" version="5.0" xml:id="app-delphi" xml:lang="ru">
+
+    <info>
+        <title>Создание приложений на Delphi с использованием FireDac</title>
+    </info>
+
+    <para>В данной главе будет описан процесс создания приложений для СУБД Firebird с использованием
+        компонентов доступа FireDac и среды Delphi XE5. FireDac является стандартным набором
+        компонентов доступа к различным базам данных начиная с Delphi XE3.</para>
+    <para>Создайте новый проект <guimenu>File->New->VCL Forms Application - Delphi</guimenu>. В
+        новый проект добавьте новый дата модуль <guimenu>File->New->Other</guimenu>, в появившемся
+        мастере выберите <guimenu>Delphi Projects->Delphi Files->Data Module</guimenu>. Этот дата
+        модуль будет главным в нашем проекте. Он будет содержать некоторые экземпляры глобальных
+        компонентов доступа, которые должны быть доступны всем формам, которые должны работать с
+        данными. Например, таким компонентом является <classname>TFDConnection</classname>.</para>
+
+    <section>
+        <title>Компонент TFDConnection</title>
+
+        <para>Компонент <classname>TFDConnection</classname> обеспечивает подключение к различным
+            типам баз данных. Будем указывать экземпляр этого компонента в свойствах
+                <varname>Connection</varname> остальных компонентов FireDac. К какому именно типу
+            баз данных будет происходить подключение, зависит от значения свойства
+                <varname>DriverName</varname>. Для доступа к Firebird нам необходимо выставить это
+            свойство в значение FB. Для того чтобы подключение знало, с какой именно библиотекой
+            доступа необходимо работать, разместим в главном дата модуле компонент
+                <classname>TFBPhysFBDriverLink</classname>. Его свойство
+                <varname>VendorLib</varname> позволяет указывать путь до клиентской библиотеки. Если
+            оно не указано, то подключение к Firebird будет осуществляться через библиотеки,
+            зарегистрированные в системе, например в <filename>system32</filename>, что в ряде
+            случаев может быть нежелательно.</para>
+
+        <section>
+            <title>Путь к клиентской библиотеке</title>
+
+            <para>Мы будем размещать необходимую библиотеку доступа в папке
+                    <filename>fbclient</filename>, которая расположена в папке приложения. Для этого
+                в коде на событие OnCreate дата модуля пропишем следующий код.
+                <programlisting language="delphi"> 
+// указываем путь до клиентской библиотеки
+xAppPath := ExtractFileDir(Application.ExeName) + PathDelim;
+FDPhysFBDriverLink.VendorLib := xAppPath + 'fbclient' + PathDelim + 'fbclient.dll';
+                </programlisting>
+            </para>
+
+            <important>
+                <para> Если вы компилируете 32 разрядное приложение, то вы должны использовать 32
+                    разрядную библиотеку <filename>fbclient.dll</filename>. Для 64 разрядного – 64
+                    разрядную. Помимо файла <filename>fbclient.dll</filename> в ту же папку
+                    желательно поместить библиотеки <filename>msvcp80.dll</filename> и
+                        <filename>msvcr80.dll</filename> (для Firebird 2.5), и
+                        <filename>msvcp100.dll</filename> и <filename>msvcr100.dll</filename> (для
+                    Firebird 3.0). Эти библиотеки можно найти либо в подпапке
+                        <filename>bin</filename> (Firebird 2.5), либо в корневой папке сервера
+                    (Firebird 3.0). </para>
+                <para> Для того чтобы приложение правильно отображало собственные ошибки firebird,
+                    необходимо также скопировать файл <filename>firebird.msg</filename>. Для
+                    Firebird 2.5 и в более ранних версиях он должен находиться на один уровень выше
+                    каталога клиентской библиотеки, т.е. в нашем случае в каталоге приложения. Для
+                    Firebird 3 он должен находиться в каталоге клиентской библиотеки, т.е. в
+                    каталоге <filename>fbclient</filename>. </para>
+            </important>
+
+            <para>Если вам необходимо чтобы ваше приложение работало без установленного сервера
+                Firebird, т.е. в режиме Embedded, то для Firebird 2.5 необходимо заменить
+                    <filename>fbclient.dll</filename> на <filename>fbembed.dll</filename>. При
+                желании имя библиотеки можно вынести в конфигурационный файл вашего приложения. Для
+                Firebird 3.0 ничего изменять не требуется (режим работы зависит от строки
+                подключения и значения параметра Providers в файле
+                    <filename>firebird.conf</filename> или
+                <filename>databases.conf</filename>).</para>
+
+            <tip>
+                <para>Даже если ваше приложение будет работать с Firebird в режиме Embedded,
+                    разработку удобнее вести под полноценным сервером. Дело в том, что в режиме
+                    Embedded Firebird работает в одном адресном пространстве с вашим приложением,
+                    что может привести к нежелательным последствиям при возникновении ошибок в вашем
+                    приложении. Кроме того, в момент разработки среда Delphi и ваше приложение
+                    являются отдельными приложениями, использующими Embedded. До версии 2.5 они не
+                    могут работать с одной базой одновременно. </para>
+            </tip>
+        </section>
+
+        <section>
+            <title>Параметры подключения</title>
+
+            <para>Компонент <classname>TFDConnection</classname> параметры подключения к базе данных
+                содержатся в свойстве <varname>Params</varname> (имя пользователя, пароль, набор
+                символов соединения и др.). Если воспользоваться редактором свойств
+                    <classname>TFDConnection</classname> (двойной клик на компоненте), то упомянутые
+                свойства будут заполнены автоматически. Набор этих свойств зависит от типа базы
+                данных.</para>
+            <para>
+                <table>
+                    <?dbfo keep-together='auto'?>
+                    <title>Основные свойства компонента TFDConnection</title>
+
+                    <tgroup cols="2">
+                        <colspec colwidth="2*" align="left"/>
+                        <colspec colwidth="4*" align="left"/>
+                        <thead>
+                            <row valign="middle">
+                                <entry align="center">Свойство</entry>
+                                <entry align="center">Назначение</entry>
+                            </row>
+                        </thead>
+                        <tbody>
+                            <row valign="middle">
+                                <entry><varname>Pooled</varname></entry>
+                                <entry><para>Используется ли пул соединений.</para></entry>
+                            </row>
+                            <row valign="middle">
+                                <entry><varname>Database</varname></entry>
+                                <entry><para>Путь к базе данных или её псевдоним, определённый в
+                                        файле конфигурации <filename>aliases.conf</filename> (или
+                                            <filename>databases.conf</filename>) сервера
+                                        Firebird.</para></entry>
+                            </row>
+                            <row valign="middle">
+                                <entry><varname>User_Name</varname></entry>
+                                <entry><para>Имя пользователя.</para></entry>
+                            </row>
+                            <row valign="middle">
+                                <entry><varname>Password</varname></entry>
+                                <entry><para>Пароль.</para></entry>
+                            </row>
+                            <row valign="middle">
+                                <entry><varname>OSAuthent</varname></entry>
+                                <entry><para>Используется ли аутентификация средствами операционной
+                                        системы.</para></entry>
+                            </row>
+                            <row valign="middle">
+                                <entry><varname>Protocol</varname></entry>
+                                <entry><para>Протокол соединения. Допускаются следующие значения:<itemizedlist>
+                                            <listitem>
+                                                <para>Local — локальный протокол;</para>
+                                            </listitem>
+                                            <listitem>
+                                                <para>NetBEUI — именованные каналы;</para>
+                                            </listitem>
+                                            <listitem>
+                                                <para>SPX — локальный протокол (до Firebird 2.0, не
+                                                  поддерживается в современных версиях);</para>
+                                            </listitem>
+                                            <listitem>
+                                                <para>TCPIP – TCP/IP.</para>
+                                            </listitem>
+                                        </itemizedlist></para></entry>
+                            </row>
+                            <row>
+                                <entry><varname>Server</varname></entry>
+                                <entry><para>Имя сервера или его IP адрес. Если сервер работает на
+                                        нестандартном порту, то необходимо также указать порт через
+                                        слэш, например localhost/3051.</para></entry>
+                            </row>
+                            <row>
+                                <entry><varname>SQLDialect</varname></entry>
+                                <entry><para>Диалект. Должен совпадать с диалектом базы
+                                        данных.</para></entry>
+                            </row>
+                            <row>
+                                <entry><varname>RoleName</varname></entry>
+                                <entry><para>Имя роли.</para></entry>
+                            </row>
+                            <row>
+                                <entry><varname>CharacterSet</varname></entry>
+                                <entry><para>Имя набора символов соединения.</para></entry>
+                            </row>
+                        </tbody>
+                    </tgroup>
+                </table>
+            </para>
+            <para>
+                <figure>
+                    <title>Параметры подключения</title>
+                    <mediaobject>
+                        <imageobject>
+                            <imagedata fileref="images/firedac-connection-editor.png" align="center"
+                            />
+                        </imageobject>
+                        <textobject>
+                            <phrase>Параметры подключения</phrase>
+                        </textobject>
+                    </mediaobject>
+                </figure>
+            </para>
+            <para>Дополнительные свойства: <itemizedlist>
+                    <listitem>
+                        <para><varname>Connected</varname> – управление подсоединением к БД, или
+                            проверка состояния соединения. Это свойство должно быть выставлено в
+                                <literal>True</literal> для работы мастеров других компонентов
+                            FireDac. Если ваше приложение должно запрашивать данные для авторизации,
+                            то важно не забыть сбросить это свойство в <literal>False</literal>
+                            перед компиляцией вашего приложения.</para>
+                    </listitem>
+                    <listitem>
+                        <para><varname>LoginPrompt</varname> – запрашивать ли имя пользователя и
+                            пароль при попытке соединения.</para>
+                    </listitem>
+                    <listitem>
+                        <para><varname>Transaction</varname> – компонент
+                                <classname>TFDTransaction</classname>, который будет использоваться
+                            в качестве умолчательного для выполнения различных операций
+                                <classname>TFDConnection</classname>. Если это свойство не назначено
+                            явно, <classname>TFDConnection</classname> создаст себе экземпляр
+                                <classname>TFDTransaction</classname> самостоятельно, его параметры
+                            можно указать в свойстве <varname>TxOptions</varname>.</para>
+                    </listitem>
+                    <listitem>
+                        <para><varname>UpdateTransaction</varname> – компонент
+                                <classname>TFDTransaction</classname>, который будет использоваться
+                            в качестве умолчательного для одноимённых свойств компонентов
+                                <classname>TFDQuery</classname>. Если это свойство не назначено
+                            явно, будет использовано значение из свойства
+                                <varname>Transaction</varname>.</para>
+                    </listitem>
+                </itemizedlist></para>
+            <para>Поскольку параметры подключения, за исключением имени пользователя и пароля,
+                обычно не изменяются в процессе эксплуатации приложения, мы будем считывать их из
+                файла конфигурации.
+                <programlisting language="delphi"> 
+// считываем параметры подключения
+xIniFile := TIniFile.Create(xAppPath + 'config.ini');
+try
+  xIniFile.ReadSectionValues('connection', FDConnection.Params);
+finally
+  xIniFile.Free;
+end;
+                </programlisting>
+            </para>
+            <para>Файл <filename>config.ini</filename> содержит примерно следующие строки:
+                <programlisting language="ini"> 
+[connection]
+DriverID=FB
+Protocol=TCPIP
+Server=localhost/3051
+Database=examples
+OSAuthent=No
+RoleName=
+CharacterSet=UTF8
+                </programlisting>
+            </para>
+            <para>Содержимое секции connection можно получить, скопировав содержимое свойства Params
+                компонента TFDConnection после работы мастера.</para>
+            <note>
+                <para>На самом деле общие настройки обычно находятся в
+                            <filename>%AppData%\<replaceable>Manufacture</replaceable>\<replaceable>AppName</replaceable></filename>
+                    и сохраняются туда инсталлятором приложения. Однако при разработке удобно чтобы
+                    файл настроек лежал где-нибудь поближе, например, в папке с приложением.</para>
+                <para>Учтите, что если ваше приложение будет устанавливаться в папку
+                        <filename>Program Files</filename> и файл настройки будет лежать там же, то
+                    либо этот файл будет виртуализироваться в <filename>Program Data</filename>,
+                    либо будут проблемы с его модификацией и последующим чтением новых настроек.
+                </para>
+            </note>
+        </section>
+        <section>
+            <title>Подключение к базе данных</title>
+
+            <para>Для подключения к базе данных необходимо изменить свойство
+                    <varname>Connected</varname> компонента <classname>TFDConnection</classname> в
+                значение <literal>True</literal> или вызвать метод <methodname>Open</methodname>. В
+                последний метод можно передать имя пользователя и пароль в качестве параметров. В
+                нашем приложении мы заменим стандартный диалог соединения с базой данных. Дадим
+                возможность ошибиться при вводе регистрационной информации не более трёх раз, после
+                чего приложение будет закрыто. Для этого напишем следующий код в обработчике события
+                    <varname>OnCreate</varname> главного датамодуля.
+                <programlisting language="delphi"> 
+// делаем максимум 3 попытки входа в систему, потом закрываем приложение
+xLoginCount := 0;
+xLoginPromptDlg := TLoginPromptForm.Create(Self);
+while (xLoginCount &lt; MAX_LOGIN_COUNT) and 
+      (not FDConnection.Connected) do
+begin
+  try
+    if xLoginPromptDlg.ShowModal = mrOK then
+      FDConnection.Open(
+        xLoginPromptDlg.UserName, xLoginPromptDlg.Password)
+    else
+      xLoginCount := MAX_LOGIN_COUNT;
+  except
+    on E: Exception do
+    begin
+      Inc(xLoginCount);
+      Application.ShowException(E);
+    end
+  end;
+end;
+xLoginPromptDlg.Free;
+
+if not FDConnection.Connected then
+  Halt;
+
+                </programlisting>
+            </para>
+        </section>
+    </section>
+
+    <section>
+        <title>Компонент TFDTransaction</title>
+
+        <para>Компонент <classname>TFDTransaction</classname> предназначен для явной работы с
+            транзакциями.</para>
+        <para>Клиентская часть Firebird допускает выполнение любых действий только в контексте
+            транзакции. Поэтому если вы смогли получить доступ к данным без явного вызова
+                <methodname>TFDTransaction.StartTransaction</methodname>, то значит где-то в недрах
+            FireDac этот вызов произошёл автоматически. Такое поведение крайне не рекомендуется
+            использовать. Для корректной работы приложений с базой данных желательно управлять
+            транзакциями вручную, то есть явно вызывать методы
+                <methodname>StartTransaction</methodname>, <methodname>Commit</methodname> и
+                <methodname>Rollback</methodname> компонента
+            <classname>TFDTransaction</classname>.</para>
+        <para>
+            <table>
+                <?dbfo keep-together='auto'?>
+                <title>Основные свойства компонента TFDTransaction</title>
+
+                <tgroup cols="2">
+                    <colspec colwidth="2*" align="left"/>
+                    <colspec colwidth="4*" align="left"/>
+                    <thead>
+                        <row valign="middle">
+                            <entry align="center">Свойство</entry>
+                            <entry align="center">Назначение</entry>
+                        </row>
+                    </thead>
+                    <tbody>
+                        <row valign="middle">
+                            <entry><varname>Connection</varname></entry>
+                            <entry><para>Связь с компонентом FDConnection.</para></entry>
+                        </row>
+                        <row valign="middle">
+                            <entry><varname>Options.AutoCommit</varname></entry>
+                            <entry><para>Управляет автоматическим стартом и завершением транзакции.
+                                    Значение по умолчанию <literal>True</literal>.</para>
+                                <para>Если значение этого свойства установлено в
+                                        <literal>True</literal>, то FireDAC делает следующее:</para>
+                                <para>Запускается транзакция (если требуется) перед выполнением
+                                    каждой SQL команды, и завершает транзакцию после выполнения SQL
+                                    команды. Если команда выполнится успешно, то транзакция будет
+                                    завершена как COMMIT, иначе — ROLLBACK.</para>
+                                <para>Если приложение вызывает метод
+                                        <methodname>StartTransaction</methodname>, то автоматическое
+                                    управление транзакциями будет отключено, до тех пор, пока
+                                    транзакция не завершится как <methodname>Commit</methodname> или
+                                        <methodname>Rollback</methodname>.</para>
+                                <para>При использовании Firebird автоматическое управление
+                                    транзакциями эмулируется самими компонентами
+                                FireDAC.</para></entry>
+                        </row>
+                        <row valign="middle">
+                            <entry><varname>Options.AutoStart</varname></entry>
+                            <entry><para>Управляет автоматическим запуском транзакции. По умолчанию
+                                        <literal>True</literal>.</para></entry>
+                        </row>
+                        <row valign="middle">
+                            <entry><varname>Options.AutoStop</varname></entry>
+                            <entry><para>Управляет автоматическим завершением транзакции. По
+                                    умолчанию <literal>True</literal>.</para></entry>
+                        </row>
+                        <row valign="middle">
+                            <entry><varname>Options.DisconnectAction</varname></entry>
+                            <entry><para>Действие, которое будет выполнено при закрытии соединения,
+                                    если транзакция активна. Значение по умолчанию
+                                        <constant>xdCommit</constant>. Возможны следующие варианты:<itemizedlist>
+                                        <listitem>
+                                            <para><constant>xdNone</constant> — ничего не будет
+                                                сделано. Действие будет отдано на откуп СУБД;</para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><constant>xdCommit</constant> — подтверждение
+                                                транзакции;</para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><constant>xdRollback</constant> — откат
+                                                транзакции.</para>
+                                        </listitem>
+                                    </itemizedlist></para>
+                                <para>В других компонентах доступа значение по умолчанию для
+                                    подобного свойства <constant>xdRollback</constant>. Поэтому
+                                    необходимо выставлять это свойство вручную в то значение,
+                                    которое действительно требуется.</para>
+                            </entry>
+                        </row>
+                        <row valign="middle">
+                            <entry><varname>Options.EnableNested</varname></entry>
+                            <entry><para>Управляет вложенными транзакциями. Значение по умолчанию
+                                        <literal>True</literal>.</para>
+                                <para>Когда транзакция активна, то следующий вызов
+                                        <methodname>StartTransaction</methodname> создаст вложенную
+                                    транзакцию. FireDAC эмулирует вложенные транзакции, используя
+                                    точки сохранения, если СУБД не поддерживает вложенные транзакции
+                                    в явном виде. Чтобы отключить вложенные транзакции, установите
+                                        <varname>EnableNested</varname> в <literal>False</literal>,
+                                    и последующий вызов <methodname>StartTransaction</methodname>
+                                    вызовет исключение.</para>
+                                <para>Firebird не поддерживает вложенные транзакции в явном
+                                    виде.</para></entry>
+                        </row>
+                        <row>
+                            <entry><varname>Options.Isolation</varname></entry>
+                            <entry><para>Определяет уровень изолированности транзакции. Это самое
+                                    важное свойство транзакции. Значение по умолчанию
+                                        <constant>xiReadCommited</constant>. Возможны следующие варианты:<itemizedlist>
+                                        <listitem>
+                                            <para><constant>xiUnspecified</constant> – используется
+                                                уровень изоляции по умолчанию для вашей СУБД (в
+                                                Firebird это SNAPSHOT, т.е. с параметрами <code>read
+                                                  write concurrency wait</code>);</para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><constant>xiDirtyRead</constant> – этого уровня
+                                                изолированности в Firebird не существует поэтому
+                                                вместо него будет использован READ COMMITED;</para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><constant>xiReadCommited</constant> – уровень
+                                                изолированности READ COMMITED. В Firebird такая
+                                                транзакция стартует с параметрами <code>read write
+                                                  read_committed rec_version nowait</code>;</para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><constant>xiRepeatableRead</constant> – этого
+                                                уровня изолированности в Firebird не существует
+                                                поэтому вместо него будет использован
+                                                SNAPSHOT;</para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><constant>xiSnapshot</constant> – уровень
+                                                изолированности SNAPSHOT. В Firebird такая
+                                                транзакция стартует с параметрами <code>read write
+                                                  concurrency wait</code>;</para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><constant>xiSerializable</constant> – уровень
+                                                изолированности SERIALIZABLE. На самом деле в
+                                                Firebird не существует транзакции с данным уровнем
+                                                изолированности, но он эмулируется запуском
+                                                транзакции с параметрами <code>read write
+                                                  consistency wait</code>.</para>
+                                        </listitem>
+                                    </itemizedlist></para></entry>
+                        </row>
+                        <row>
+                            <entry><varname>Options.Params</varname></entry>
+                            <entry><para>Специфичные для СУБД параметры транзакции. В настоящее
+                                    время используется только для Firebird и Interbase. Возможны
+                                    комбинации из следующих значений:<itemizedlist spacing="compact">
+                                        <listitem>
+                                            <para><literal>read</literal></para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><literal>write</literal></para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><literal>read_commited</literal></para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><literal>concurrency</literal></para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><literal>consistency</literal></para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><literal>wait</literal></para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><literal>nowait</literal></para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><literal>rec_version</literal></para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><literal>no rec_version</literal></para>
+                                        </listitem>
+                                    </itemizedlist></para></entry>
+                        </row>
+                        <row>
+                            <entry><varname>Options.ReadOnly</varname></entry>
+                            <entry><para>Указывает является ли транзакция только для чтения. По
+                                    умолчанию <literal>False</literal>. Если установлено в
+                                        <literal>True</literal>, то любые изменения в рамках текущей
+                                    транзакции невозможны, в Firebird в этом случае отсутствует
+                                    значение read в параметрах транзакции.</para>
+                                <para>Установка этого свойства в <literal>True</literal> позволяет
+                                    СУБД оптимизировать использование ресурсов.</para></entry>
+                        </row>
+                    </tbody>
+                </tgroup>
+            </table>
+        </para>
+        <para>В отличие от других СУБД в Firebird и Interbase разрешено использовать сколько угодно
+            компонентов <classname>TFDTransaction</classname> привязанных к одному соединению. В
+            нашем приложении мы будем использовать одну общую читающую транзакцию для всех
+            справочников и оперативных журналов, и по одной пишущей транзакции на каждый
+            справочник/журнал.</para>
+        <para>В нашем приложении мы не будем полагаться на автоматический старт и завершение
+            транзакций, а потому во всех транзакциях <code language="delphi">Options.AutoCommit =
+                False</code>, <code language="delphi">Options.AutoStart = False</code> и <code
+                language="delphi">Options.AutoStop = False</code>.</para>
+        <para>Поскольку читающая транзакция общая для всех справочников и журналов, то удобно
+            разместить её в главном дата модуле. Для обычной работы (показ данных в гриде и т.п.)
+            обычно используются режим изолированости READ COMMITED (<code language="delphi"
+                >Options.Isolation = xiReadCommited</code>), т.к. он позволяет транзакции видеть
+            чужие, committed изменения базы данных просто путём повторного выполнения запросов
+            (перечитывания данных). Поскольку эта транзакция используется только для чтения,
+            установим свойство <varname>Options.ReadOnly</varname> в значение
+                <literal>True</literal>. Таким образом, наша транзакция будет иметь параметры
+                <code>read read_commited rec_version</code>. Транзакция с такими параметрами в
+            Firebird может быть открытой сколь угодно долгое время (дни, недели, месяцы), без
+            блокирования других транзакций или влияния на накопление мусора в базе данных (потому
+            что на самом деле, на сервере такая транзакция стартует как committed).</para>
+        <note>
+            <para>Такую транзакцию нельзя использовать для отчётов (особенно если они используют
+                несколько последовательных запросов), потому что транзакция с режимом
+                изолированности READ COMMITED во время перечитывания данных будет видеть все новые
+                committed-изменения.</para>
+            <para>Для отчётов рекомендуется использовать короткую транзакцию только для чтения с
+                режимом изолированности SNAPSHOT (<code>Options.Isolation = xiSnapshot</code> и
+                    <code language="delphi">Options.ReadOnly= True</code>). В данном примере работа
+                с отчётами не рассматривается.</para>
+        </note>
+        <para>Стартуем читающую транзакцию сразу после успешной установки соединения с базой данных,
+            вызвав <methodname>trRead.StartTransaction</methodname> в событии
+                <varname>OnCreate</varname> главного датамодуля, и завершаем перед закрытием
+            соединения, вызвав <methodname>tRead.Commit</methodname> в событии
+                <varname>OnDestroy</varname> главного датамодуля. Значение свойства
+                <varname>Options.DisconnectAction</varname> равное <constant>xdCommit</constant> по
+            умолчанию, подходит для транзакции только для чтения.</para>
+        <para>Пишущая транзакция будет отдельной для каждого справочника/журнала. Её мы разместим на
+            форме, которая относится непосредственно к нужному журналу. Пишущая транзакция должна
+            быть максимально короткой для того, чтобы не удерживать Oldest Active Transaction,
+            которая не даёт собрать мусор, что в свою очередь приводит к деградации
+            производительности. Поскольку пишущая транзакция очень короткая мы можем использовать
+            уровень изолированности SNAPSHOT. Таким образом, наша пишущая транзакция будет иметь
+            параметры <code language="delphi">Options.ReadOnly=False</code> и <code
+                language="delphi">Options.Isolation = xiSnapshot</code>. Для пишущих транзакций
+            значение свойства <varname>Options.DisconnectAction</varname> по умолчанию не подходит,
+            его необходимо выставить в значение <constant>xdRollback</constant>.</para>
+    </section>
+    <section>
+        <title>Датасеты</title>
+
+        <para>Работать с данными в FireDac можно при помощи компонент
+                <classname>TFDQuery</classname>, <classname>TFDTable</classname>,
+                <classname>TFDStoredProc</classname>, <classname>TFDCommand</classname>, но
+                <classname>TFDCommand</classname> не является датасетом.</para>
+        <para><classname>TFDQuery</classname>, <classname>TFDTable</classname> и
+                <classname>TFDStoredProc</classname> унаследованы от
+                <classname>TFDRdbmsDataSet</classname>. Помимо наборов данных для работы
+            непосредственно с базой данных, в FireDac существует также компонент
+                <classname>TFDMemTable</classname>, который предназначен для работы с набором данных
+            в памяти, является аналогом <classname>TClientDataSet</classname>.</para>
+        <para>Основным компонентом для работы с наборами данных является
+                <classname>TFDQuery</classname>. Возможностей этого компонента хватает практически
+            для любых целей. Компоненты <classname>TFDTable</classname> и
+                <classname>TFDStoredProc</classname> всего лишь модификации, либо чуть расширенные,
+            либо усеченные. Мы не будем их рассматривать и применять в нашем приложении. При желании
+            вы можете ознакомиться с ними в документации по FireDac.</para>
+        <para>Назначение компонента — буферизация записей, выбираемых оператором SELECT, для
+            представления этих данных в Grid, а также для обеспечения "редактируемости" записи
+            (текущей в буфере (гриде)). В отличие от компонента
+                <classname>IBX.TIBDataSet</classname> компонент <classname>TFDQuery</classname> не
+            содержит свойств <varname>RefreshSQL</varname>, <varname>InsertSQL</varname>,
+                <varname>UpdateSQL</varname> и <varname>DeleteSQL</varname>. Вместо этого
+            «редактируемость» обеспечивается компонентом <classname>TFDUpdateSQL</classname>,
+            который устанавливается в свойство <varname>UpdateObject</varname>.</para>
+        <note>
+            <para>В ряде случаев можно сделать компонент <classname>TFDQuery</classname>
+                редактируемым без установки свойства <varname>UpdateObject</varname> и прописывания
+                запросов Insert/Update/Delete, просто установив свойство <code language="delphi"
+                    >UpdateOptions.RequestLive = True</code>, при этом модифицирующие запросы будут
+                сгенерированы автоматически. Однако такой подход имеет множество ограничений на
+                основной SELECT запрос, поэтому не стоит полагаться на него. </para>
+        </note>
+        <para>
+            <table>
+                <?dbfo keep-together='auto'?>
+                <title>Основные свойства компонента TFDQuery</title>
+
+                <tgroup cols="2">
+                    <colspec colwidth="3*" align="left"/>
+                    <colspec colwidth="5*" align="left"/>
+                    <thead>
+                        <row valign="middle">
+                            <entry align="center">Свойство</entry>
+                            <entry align="center">Назначение</entry>
+                        </row>
+                    </thead>
+                    <tbody>
+                        <row valign="middle">
+                            <entry><varname>Connection</varname></entry>
+                            <entry><para>Связь с компонентом
+                                    <classname>FDConnection</classname>.</para></entry>
+                        </row>
+                        <row valign="middle">
+                            <entry><varname>MasterSource</varname></entry>
+                            <entry>
+                                <para>Ссылка на Master-источник данных
+                                        (<classname>TDataSource</classname>) для
+                                        <classname>FDQuery</classname>, используемого в качестве
+                                    Detail.</para>
+                            </entry>
+                        </row>
+                        <row valign="middle">
+                            <entry><varname>Transaction</varname></entry>
+                            <entry>
+                                <para>Транзакция, в рамках которой будет выполняться запрос,
+                                    прописанный в свойстве SQL. Если свойство не указано будет
+                                    использоваться транзакция по умолчанию для подключения.</para>
+                            </entry>
+                        </row>
+                        <row valign="middle">
+                            <entry><varname>UpdateObject</varname></entry>
+                            <entry>
+                                <para>Связь с компонентом <classname>FDUpdateSQL</classname>,
+                                    который обеспечивает «редактируемость» набора данных, когда
+                                    SELECT запрос не отвечает требованиям для автоматического
+                                    формирования модифицирующих запросов при установке <code
+                                        language="delphi">UpdateOptions.RequestLive =
+                                    True</code>.</para>
+                            </entry>
+                        </row>
+                        <row valign="middle">
+                            <entry><varname>UpdateTransaction</varname></entry>
+                            <entry>
+                                <para>Транзакция, в рамках которой будут выполняться модифицирующие
+                                    запросы. Если свойство не указано, будет использована транзакция
+                                    из свойства <varname>Transaction</varname>.</para>
+                            </entry>
+                        </row>
+                        <row valign="middle">
+                            <entry><varname>UpdateOptions.CheckRequired</varname></entry>
+                            <entry>
+                                <para>Если свойство <varname>CheckRequired</varname> установлено в
+                                        <literal>True</literal>, то FireDac контролирует свойство
+                                        <varname>Required</varname> соответвующих полей, т.е. полей
+                                    с ограничением NOT NULL. По умолчанию установлено в
+                                        <literal>True</literal>.</para>
+                                <para>Если <code language="delphi">CheckRequired=True</code> и в
+                                    поле имеющее свойство <code language="delphi"
+                                        >Required=True</code> не присвоено значение, то при вызове
+                                    метода <methodname>Post</methodname> будет возбуждено
+                                    исключение. Это может быть нежелательно в том случае, если
+                                    значение этого поля может быть присвоено позже в BEFORE
+                                    триггерах.</para>
+                            </entry>
+                        </row>
+                        <row valign="middle">
+                            <entry><varname>UpdateOptions.EnableDelete</varname></entry>
+                            <entry>
+                                <para>Определяет, позволяется ли удаление записи из набора данных.
+                                    Если <code language="delphi">EnableDelete=False</code>, то при
+                                    вызове метода Delete будет возбуждено исключение.</para>
+                            </entry>
+                        </row>
+                        <row valign="middle">
+                            <entry><varname>UpdateOptions.EnableInsert</varname></entry>
+                            <entry>
+                                <para>Определяет, позволяется ли вставка записи в набор данных. Если
+                                        <code language="delphi">EnableInsert=False</code>, то при
+                                    вызове метода
+                                        <methodname>Insert</methodname>/<methodname>Append</methodname>
+                                    будет возбуждено исключение.</para>
+                            </entry>
+                        </row>
+                        <row valign="middle">
+                            <entry><varname>UpdateOptions.EnableUpdate</varname></entry>
+                            <entry>
+                                <para>Определяет, позволяется ли изменение записи в наборе данных.
+                                    Если <code language="delphi">EnableUpdate=False</code>, то при
+                                    вызове метода <methodname>Edit</methodname> будет возбуждено
+                                    исключение.</para>
+                            </entry>
+                        </row>
+                        <row valign="middle">
+                            <entry><varname>UpdateOptions.FetchGeneratorsPoint</varname></entry>
+                            <entry>
+                                <para>Управляет моментом получения следующего значения генератора
+                                    указанного в свойстве
+                                        <varname>UpdateOptions.GeneratorName</varname> или свойстве
+                                        <varname>GeneratorName</varname> автоинкрементного поля
+                                        <code language="delphi">AutoGenerateValue =
+                                    arAutoInc</code>. Имеет следующие варианты значений:<itemizedlist>
+                                        <listitem>
+                                            <para><constant>gpNone</constant> – значение генератора
+                                                не извлекается;</para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><constant>gpImmediate</constant> – следующее
+                                                значение генератора извлекается сразу после вызова
+                                                метода
+                                                  <methodname>Insert</methodname>/<methodname>Append</methodname>;</para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><constant>gpDeffered</constant> – следующее
+                                                значение генератора извлекается до публикации новой
+                                                записи в базе данных, т.е. во время выполнения
+                                                методов <methodname>Post</methodname> или
+                                                  <methodname>ApplyUpdates</methodname>.</para>
+                                        </listitem>
+                                    </itemizedlist> Значение по умолчанию
+                                        <constant>gpDeffered</constant>. </para>
+                            </entry>
+                        </row>
+                        <row valign="middle">
+                            <entry><varname>UpdateOptions.GeneratorName</varname></entry>
+                            <entry>
+                                <para>Имя генератора для извлечения следующего значения
+                                    автоинкрементного поля.</para>
+                            </entry>
+                        </row>
+                        <row valign="middle">
+                            <entry><varname>UpdateOptions.ReadOnly</varname></entry>
+                            <entry>
+                                <para>Указывает, является ли набор данных только для чтения. По
+                                    умолчанию <literal>False</literal>. Если значение этого свойства
+                                    установлено в <literal>True</literal>, то значения свойств
+                                        <varname>EnableDelete</varname>,
+                                        <varname>EnableInsert</varname> и
+                                        <varname>EnableUpdate</varname> будут автоматически
+                                    выставлены в <literal>False</literal>.</para>
+                            </entry>
+                        </row>
+                        <row>
+                            <entry><varname>UpdateOptions.RequestLive</varname></entry>
+                            <entry>
+                                <para>Установка <varname>RequestLive</varname> в
+                                        <literal>True</literal> делает запрос «живым», т.е.
+                                    редактируемым, если это возможно. При этом запросы
+                                    Insert/Update/Delete будут сгенерированы автоматически. Эта
+                                    опция накладывает множество ограничений на SELECT запрос,
+                                    введена для обратной совместимости с BDE и не
+                                    рекомендуется.</para>
+                            </entry>
+                        </row>
+                        <row>
+                            <entry><varname>UpdateOptions.UpdateMode</varname></entry>
+                            <entry>
+                                <para>Отвечает за проверку модификации записи. Это свойство
+                                    позволяло контролировать возможное "перекрытие" обновлений для
+                                    случаев, когда пользователь выполняет редактирование записи
+                                    "долго", а другой пользователь может успеть отредактировать эту
+                                    же запись и сохранить её раньше. То есть, первый пользователь на
+                                    этапе редактирования даже не будет знать, что запись уже
+                                    изменилась, возможно не один раз, и сумеет "затереть" эти
+                                    обновления своим:<itemizedlist>
+                                        <listitem>
+                                            <para><constant>upWhereAll</constant> — проверка на
+                                                существование записи по первичному ключу + проверка
+                                                всех столбцов на старые значения. Например
+                                                <programlisting language="sql">
+update table 
+set ... 
+where pkfield = :old_ pkfield 
+  and client_name = :old_client_name 
+  and info = :old_info 
+...                                                     
+                                                </programlisting>
+                                                То есть, в данном случае запрос поменяет информацию
+                                                в записи только в том случае, если запись до нас
+                                                никто не успел изменить. Особенно это важно, если
+                                                существуют взаимозависимости между значениями
+                                                столбцов — например, минимальная и максимальная
+                                                зарплата, и т.п. </para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><constant>upWhereCahnged</constant> — проверка
+                                                записи на существование по первичному ключу + плюс
+                                                проверка на старые значения только изменяемых
+                                                столбцов.
+                                                <programlisting language="sql">
+update table 
+set ... 
+where pkfield = :old_ pkfield 
+  and client_name = :old_client_name 
+  and info = :old_info 
+...                                                     
+                                                </programlisting>
+                                            </para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><constant>upWhereKeyOnly</constant> (по умолчанию)
+                                                — проверка записи на существование по первичному
+                                                ключу.</para>
+                                        </listitem>
+                                    </itemizedlist>
+                                </para>
+                                <para>Последняя проверка соответствует генерируемому автоматически
+                                    для <varname>UpdateSQL</varname> запросу. Поэтому, при возможных
+                                    конфликтах обновлений в многопользовательской среде необходимо
+                                    дописывать условия к <database>where</database> самостоятельно.
+                                    И, разумеется, также необходимо при реализации аналога
+                                        <constant>upWhereChanged</constant> удалять лишние изменения
+                                    столбцов в <code language="sql">update table set ...</code> - то
+                                    есть, оставлять в перечне set только действительно изменённые
+                                    столбцы, иначе запрос перепишет чужие обновления этой записи.
+                                    Как вы понимаете, это означает необходимость динамического
+                                    конструирования запроса <varname>UpdateSQL</varname>.</para>
+                                <para>Если вы хотите задать настройки обнаружения конфликтов
+                                    обновления индивидуально для каждого поля, то вы можете
+                                    воспользоваться свойством <varname>ProviderFlags</varname> для
+                                    каждого поля.</para>
+                            </entry>
+                        </row>
+                        <row>
+                            <entry><varname>CachedUpdates</varname></entry>
+                            <entry>
+                                <para>Определяет, будет ли набор данных кэшировать изменения без
+                                    немедленного внесения их в базу данных. Если это свойство
+                                    установлено в значение <literal>True</literal>, то любые
+                                    изменения
+                                        (<methodname>Insert</methodname>/<methodname>Post</methodname>,
+                                        <methodname>Update</methodname>/<methodname>Post</methodname>,
+                                        <methodname>Delete</methodname>) вносятся в базу данных не
+                                    сразу, а сохраняется в специальном журнале. Приложение должно
+                                    явно применить изменения, вызвав метод
+                                        <methodname>ApplyUpdates</methodname>. В этом случае все
+                                    изменения будут выполнены в течение малого промежутка времени и
+                                    в одной короткой транзакции. По умолчанию значение этого
+                                    свойства <literal>False</literal>.</para>
+                            </entry>
+                        </row>
+                        <row>
+                            <entry><varname>SQL</varname></entry>
+                            <entry>
+                                <para>Содержит SQL запрос. Если это свойство содержит SELECT запрос,
+                                    то его необходимо выполнять методом
+                                        <methodname>Open</methodname>. В противном случае необходимо
+                                    использовать методы <methodname>Execute</methodname> или
+                                        <methodname>ExecSQL</methodname>.</para>
+                            </entry>
+                        </row>
+                    </tbody>
+                </tgroup>
+            </table>
+        </para>
+    </section>
+    <section>
+        <title>Компонент TFDUpdateSQL</title>
+
+        <para>Компонент <classname>TFDUpdateSQL</classname> позволяет переопределять SQL команды,
+            сгенерированные для автоматического обновления набора данных. Он может быть использован
+            для внесения обновлений в компоненты <classname>TFDQuery</classname>,
+                <classname>TFDTable</classname> и <classname>TFDStoredProc</classname>.
+            Использование <classname>TFDUpdateSQL</classname> является необязательным для
+            компонентов <classname>TFDQuery</classname> и <classname>TFDTable</classname>, потому
+            что эти компоненты способны автоматически генерировать команды для публикации обновлений
+            из набора данных в СУБД. Использование <classname>TFDUpdateSQL</classname> является
+            обязательным для возможности обновления набора данных
+                <classname>TFDStoredProc</classname>. Рекомендуем применять его всегда, даже для
+            самых простых случаев, чтобы получать полный контроль над тем какие запросы выполняются
+            в вашем приложении.</para>
+
+        <para>Для того чтобы указать SQL команды на этапе проектирования, используйте редактор
+                <classname>TFDUpdateSQL</classname> времени проектирования, который вызывается
+            двойным щелчком по компоненту.</para>
+
+        <note>
+            <para>Для работы многих редакторов времени проектирования FireDac требуется, чтобы было
+                активно подключение к базе данных (<code language="delphi">TFDConnection.Connected =
+                    True</code>) и транзакция находилась в режиме автостарта (<code
+                    language="delphi">TFDTransaction.Options.AutoStart = True</code>). Но такие
+                настройки могут мешать при работе приложения. Например, пользователь должен входить
+                в программу под своим логином, а <classname>TFDConnection</classname> подключается к
+                базе данных под SYSDBA. Поэтому после каждого использования редакторов времени
+                проектирования рекомендуем проверять свойство
+                    <varname>TFDConnection.Connected</varname> и сбрасывать его. Кроме того, вам
+                придётся включать и выключать автостарт транзакции предназначенной только для
+                чтения.</para>
+        </note>
+
+        <para>
+            <figure>
+                <title>Настройка TFDUpdateSQL. Генерация запросов.</title>
+                <mediaobject>
+                    <imageobject>
+                        <imagedata fileref="images/firedac-fdupdatesql.png" width="680"/>
+                    </imageobject>
+                    <textobject>
+                        <phrase>Настройка TFDUpdateSQL. Генерация запросов.</phrase>
+                    </textobject>
+                </mediaobject>
+            </figure>
+        </para>
+        <para>На закладке Generate вы можете упростить себе задачу по написанию
+            Insert/Update/Delete/Refresh запросов. Для этого выберете таблицу для обновления, её
+            ключевые поля, поля для обновления, и поля которые будут перечитаны после обновления, и
+            нажмите на кнопку «Generate SQL». После чего запросы будут сгенерированы автоматически,
+            и вы перейдёте на закладку «SQL Commands», где можете поправить каждый из запросов. <figure>
+                <title>Настройка TFDUpdateSQL. SQL команды.</title>
+                <mediaobject>
+                    <imageobject>
+                        <imagedata fileref="images/firedac-fdupdatesql-sql.png" width="680"/>
+                    </imageobject>
+                    <textobject>
+                        <phrase>Настройка TFDUpdateSQL. SQL команды.</phrase>
+                    </textobject>
+                </mediaobject>
+            </figure>
+        </para>
+        <note>
+            <para>Поскольку product_id не включено в Updating Fields, оно отсутствует в генерируемом
+                запросе insert. Предполагается, что этот столбец заполняется автоматически триггером
+                (с генератором), или же этот это IDENTITY столбец (начиная с Firebird 3.0). При
+                получении значения генератора для этого столбца с сервера, рекомендуется вручную
+                добавить столбец PRODUCT_ID в предложение RETURNING оператора INSERT.</para>
+        </note>
+        <para>На закладке Options находятся некоторые свойства, которые могут повлиять на генерацию
+            запросов. Эти свойства не относятся к самому компоненту
+                <classname>TFDUpdateSQL</classname>, а являются ссылками на свойства
+                <varname>UpdateOptions</varname> набора данных, у которого указан текущий
+                <classname>TFDUpdateSQL</classname> в свойстве <varname>UpdateObject</varname>. Так
+            сделано исключительно ради удобства.</para>
+        <para>
+            <table>
+                <?dbfo keep-together='auto'?>
+                <title>Основные свойства компонента TFDUpdateSQL</title>
+
+                <tgroup cols="2">
+                    <colspec colwidth="2*" align="left"/>
+                    <colspec colwidth="4*" align="left"/>
+                    <thead>
+                        <row valign="middle">
+                            <entry align="center">Свойство</entry>
+                            <entry align="center">Назначение</entry>
+                        </row>
+                    </thead>
+                    <tbody>
+                        <row valign="middle">
+                            <entry><varname>Connection</varname></entry>
+                            <entry><para>Связь с компонентом
+                                    <classname>TFDConnection</classname>.</para></entry>
+                        </row>
+                        <row valign="middle">
+                            <entry><varname>DeleteSQL</varname></entry>
+                            <entry><para>SQL запрос для удаления записи.</para></entry>
+                        </row>
+                        <row valign="middle">
+                            <entry><varname>FetchRowSQL</varname></entry>
+                            <entry><para>SQL запрос для возврата одной текущей (обновлённой,
+                                    вставленной) записи.
+                                (<varname>RefreshSQL</varname>)</para></entry>
+                        </row>
+                        <row valign="middle">
+                            <entry><varname>InsertSQL</varname></entry>
+                            <entry><para>SQL запрос для вставки записи.</para></entry>
+                        </row>
+                        <row valign="middle">
+                            <entry><varname>LockSQL</varname></entry>
+                            <entry><para>SQL запрос для блокировки одной текущей записи. (<code
+                                        language="sql">FOR UPDATE WITH LOCK</code>).</para></entry>
+                        </row>
+                        <row valign="middle">
+                            <entry><varname>ModifySQL</varname></entry>
+                            <entry><para>SQL запрос для модификации записи.</para></entry>
+                        </row>
+                        <row valign="middle">
+                            <entry><varname>UnlockSQL</varname></entry>
+                            <entry><para>SQL запрос для разблокировки текущей записи. В Firebird не
+                                    применяется.</para></entry>
+                        </row>
+                    </tbody>
+                </tgroup>
+            </table>
+        </para>
+        <para>Как вы уже заметили, у компонента <classname>TFDUpdateSQL</classname> нет свойства
+                <varname>Transaction</varname>. Это потому, что компонент не выполняет
+            модифицирующие запросы непосредственно, а лишь заменяет автоматически сгенерированные
+            запросы в наборе данных, который является предком
+            <classname>TFDRdbmsDataSet</classname>.</para>
+    </section>
+    <section>
+        <title>Компонент TFDCommand</title>
+
+        <para>Компонент <classname>TFDCommand</classname> предназначен для выполнения SQL запросов.
+            Он не является предком <classname>TDataSet</classname>, а потому удобен лишь для
+            выполнения SQL запросов, не возвращающих набор данных.</para>
+        <para>
+            <table>
+                <?dbfo keep-together='auto'?>
+                <title>Основные свойства компонента TFDCommand</title>
+
+                <tgroup cols="2">
+                    <colspec colwidth="2*" align="left"/>
+                    <colspec colwidth="4*" align="left"/>
+                    <thead>
+                        <row valign="middle">
+                            <entry align="center">Свойство</entry>
+                            <entry align="center">Назначение</entry>
+                        </row>
+                    </thead>
+                    <tbody>
+                        <row valign="middle">
+                            <entry><varname>Connection</varname></entry>
+                            <entry><para>Связь с компонентом
+                                    <classname>TFDConnection</classname>.</para></entry>
+                        </row>
+                        <row valign="middle">
+                            <entry><varname>Transaction</varname></entry>
+                            <entry>
+                                <para>Транзакция, в рамках которой будет выполняться SQL
+                                    команда.</para>
+                            </entry>
+                        </row>
+                        <row valign="middle">
+                            <entry><varname>CommandKind</varname></entry>
+                            <entry><para>Тип команды. <itemizedlist>
+                                        <listitem>
+                                            <para><constant>skUnknown</constant> – неизвестен. В
+                                                этом случае тип команды будет определятся
+                                                автоматически по тексту команды внутренним
+                                                парсером;</para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><constant>skStartTransaction</constant> – команда
+                                                для старта транзакции;</para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><constant>skCommit</constant> – команда завершения
+                                                и подтверждения транзакции;</para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><constant>skRollback</constant> – команда
+                                                завершения и отката транзакции;</para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><constant>skCreate</constant> – команда CREATE …
+                                                для создания нового объекта метаданных;</para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><constant>skAlter</constant> – команда ALTER … для
+                                                модификации объекта метаданных;</para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><constant>skDrop</constant> – команда DROP … для
+                                                удаления объекта метаданных;</para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><constant>skSelect</constant> – команда SELECT для
+                                                выборки данных;</para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><constant>skSelectForLock</constant> – команда
+                                                SELECT … WITH LOCK для блокировки выбранных
+                                                строк;</para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><constant>skInsert</constant> – команда INSERT …
+                                                для вставки новой записи;</para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><constant>skUpdate</constant> – команда UPDATE …
+                                                для модификации записей;</para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><constant>skDelete</constant> – команда DELETE …
+                                                для удаления записей;</para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><constant>skMerge</constant> – команда MERGE INTO
+                                                …</para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><constant>skExecute</constant> – команда EXECUTE
+                                                PROCEDURE или EXECUTE BLOCK;</para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><constant>skStoredProc</constant> – вызов хранимой
+                                                процедуры;</para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><constant>skStoredProcNoCrs</constant> – вызов
+                                                хранимой процедуры не возвращающей курсор;</para>
+                                        </listitem>
+                                        <listitem>
+                                            <para><constant>skStoredProcWithCrs</constant> – вызов
+                                                хранимой процедуры возвращающей курсор.</para>
+                                        </listitem>
+                                    </itemizedlist> Обычно тип команды определяется автоматически по
+                                    тексту SQL запроса.</para></entry>
+                        </row>
+                        <row valign="middle">
+                            <entry><varname>CommandText</varname></entry>
+                            <entry>
+                                <para>Текст SQL запроса.</para>
+                            </entry>
+                        </row>
+                    </tbody>
+                </tgroup>
+            </table>
+        </para>
+    </section>
+
+    <section>
+        <title>Создание справочников</title>
+
+        <para>В нашем приложении мы создадим два справочника: справочник товаров и справочник
+            заказчиков. Каждый из справочников представляет собой форму с сеткой
+                <classname>TDBGrid</classname>, источником данных
+            <classname>TDataSource</classname>, набором данных <classname>TFDQuery</classname>,
+            пишущей транзакции <classname>TFDTransaction</classname>.</para>
+
+        <para>Рассмотрим создание справочников на примере справочника заказчиков.</para>
+
+        <para>
+            <figure>
+                <title>Форма справочника Customers</title>
+                <mediaobject>
+                    <imageobject>
+                        <imagedata fileref="images/firedac-customers-form.png" width="680"/>
+                    </imageobject>
+                    <textobject>
+                        <phrase>Форма справочника Customers.</phrase>
+                    </textobject>
+                </mediaobject>
+            </figure>
+        </para>
+
+        <note>
+            <para>Компонент <varname>trRead</varname> не виден, потому что находится не на форме, а
+                в модуле <varname>dmMain</varname>.</para>
+        </note>
+
+        <para>Разместим компонент <classname>TFDQuery</classname> на форме с именем
+                <varname>qryCustomers</varname>. Этот набор данных будет указан в свойстве
+                <varname>DataSet</varname> источника данных <varname>DataSource</varname>. В
+            свойстве <varname>Transaction</varname> укажем ReadOnly транзакцию
+                <varname>trRead</varname>, которая была создана в главном датамодуле проекта. В
+            свойстве <varname>UpdateTransaction</varname> указываем транзакцию
+                <varname>trWrite</varname>, в свойстве <varname>Connection</varname> — соединение
+            расположенное в главном датамодуле. В свойстве SQL напишем следующий запрос:
+            <programlisting language="sql"> 
+SELECT
+    customer_id,
+    name,
+    address,
+    zipcode,
+    phone
+FROM
+    customer
+ORDER BY name
+                </programlisting>
+        </para>
+
+        <para>Пишущая транзакция <varname>trWrite</varname> должна быть максимально короткой, и
+            иметь режим изолированности SNAPSHOT. Мы не будем полагаться на автоматический старт и
+            завершение транзакции, а будем стартовать и завершать транзакцию явно. Таким образом,
+            наша транзакция должна иметь следующие свойства:
+            <programlisting> 
+Options.AutoStart = False
+Options.AutoCommit = False
+Options.AutoStop = False
+Options.DisconnectAction = xdRollback
+Options.Isolations = xiSnapshot
+Options.ReadOnly = False
+                </programlisting>
+        </para>
+
+        <para>На самом деле необязательно устанавливать режим изолированности SNAPSHOT для простых
+            INSERT/UPDATE/DELETE. Однако если у таблицы есть сложные триггеры, или вместо простых
+            запросов INSERT/UPDATE/DELETE вызывается хранимая процедура, то желательно использовать
+            уровень изолированности SNAPSHOT.</para>
+
+        <para>Дело в том, что уровень изолированности READ COMMITED не обеспечивает атомарности
+            оператора в пределах одной транзакции (statement read consistency). Таким образом,
+            оператор SELECT может возвращать данные, которые попали в базу данных после начала
+            выполнения запроса. В принципе режим изолированности SNAPSHOT можно рекомендовать почти
+            всегда, если транзакция будет короткой.</para>
+
+        <para>Для возможности редактирования набора данных необходимо заполнить свойства
+                <varname>InsertSQL</varname>, <varname>ModifySQL</varname>,
+                <varname>DeleteSQL</varname> и <varname>FetchRowSQL</varname>. Эти свойства могут
+            быть сгенерированы мастером, но после этого может потребоваться некоторая правка.
+            Например вы можете дописать предложение RETURNING, удалить модификацию некоторых
+            столбцов, или же вовсе заменить автоматически сгенерированный запрос на вызов хранимой
+            процедуры.</para>
+
+        <formalpara>
+            <title>InsertSQL:</title>
+
+            <para>
+                <programlisting language="sql"> 
+INSERT INTO customer (customer_id,
+                      name,
+                      address,
+                      zipcode,
+                      phone)
+VALUES (:new_customer_id,
+        :new_name,
+        :new_address,
+        :new_zipcode,
+        :new_phone)
+                </programlisting>
+            </para>
+        </formalpara>
+        <formalpara>
+            <title>ModifySQL:</title>
+
+            <para>
+                <programlisting language="sql"> 
+UPDATE customer
+SET name = :new_name,
+    address = :new_address,
+    zipcode = :new_zipcode,
+    phone = :new_phone
+WHERE (customer_id = :old_customer_id)
+                </programlisting>
+            </para>
+        </formalpara>
+        <formalpara>
+            <title>DeleteSQL:</title>
+
+            <para>
+                <programlisting language="sql"> 
+DELETE FROM customer
+WHERE (customer_id = :old_customer_id)
+                </programlisting>
+            </para>
+        </formalpara>
+        <formalpara>
+            <title>FetchRowSQL:</title>
+
+            <para>
+                <programlisting language="sql"> 
+SELECT
+    customer_id,
+    name,
+    address,
+    zipcode,
+    phone
+FROM
+    customer
+WHERE customer_id = :old_customer_id
+                </programlisting>
+            </para>
+        </formalpara>
+
+        <para>В этом справочнике будем получать значение генератора перед вставкой записи в таблицу.
+            Для этого необходимо установить значение свойств компонента
+                <classname>TFDQuery</classname> в следующие значения
+                <code>UpdateOptions.GeneratorName = GEN_CUSTOMER_ID</code> и
+                <code>UpdateOptions.AutoIncFields = CUSTOMER_ID</code>. Есть другой способ, когда
+            значение генератора (автоинкрементного поля) возвращается после выполнения INSERT
+            запроса с помощью предложения RETURNING. Этот способ будет показан позже.</para>
+
+        <para>Для добавления новой записи и редактирования существующей принято использовать
+            модальные формы, по закрытию которых с результатом <constant>mrOK</constant> изменения
+            вносятся в базу данных. Обычно для создания таких форм используются DBAware компоненты,
+            которые позволяют отображать значения некоторого поля в текущей записи и немедленно
+            вносить изменения в текущую запись набора данных в режимах
+                <methodname>Insert</methodname>/<methodname>Edit</methodname>, т.е. до
+                <methodname>Post</methodname>. Но перевести набор данных в режим Insert/Edit можно
+            только стартовав пишущую транзакцию. Таким образом, если кто-то откроет форму для
+            внесения новой записи и уйдёт на обед, не закрыв эту форму, у нас будет висеть активная
+            транзакция до тех пор, пока сотрудник не вернётся с обеда и не закроет форму. Это в свою
+            очередь приведёт к тому, что активная транзакция будет удерживать сборку мусора, что
+            позже приведёт к снижению производительности. Эту проблему можно решить одним из двух способов:<orderedlist>
+                <listitem>
+                    <para>Использовать режим <varname>CachedUpdates</varname>, что позволяет держать
+                        транзакцию активной только на очень короткий промежуток времени, а именно на
+                        время внесения изменений.</para>
+                </listitem>
+                <listitem>
+                    <para>Отказаться от применения DBAware компонентов. Однако этот путь потребует
+                        от вас дополнительных усилий.</para>
+                </listitem>
+            </orderedlist></para>
+
+        <para>Мы покажем применение обоих способов. Для справочников гораздо удобнее использовать
+            первый способ. Рассмотрим код редактирования записи поставщика
+            <programlisting language="delphi"> 
+procedure TCustomerForm.actEditRecordExecute(Sender: TObject);
+var
+  xEditor: TEditCustomerForm;
+begin
+  xEditor := TEditCustomerForm.Create(Self);
+  try
+    xEditor.OnClose := CustomerEditorClose;
+    xEditor.CustomerForm := Self;
+    xEditor.Caption := 'Edit customer';
+    qryCustomer.CachedUpdates := True;
+    qryCustomer.Edit;
+    xEditor.ShowModal;
+  finally
+    xEditor.Free;
+  end;
+end;
+                </programlisting>
+        </para>
+        <para>По коду видно, что перед переводом набора данных в режим редактирования мы
+            устанавливаем ему режим <varname>CachedUpdates</varname>, а вся логика обработки
+            редактирования происходит в модальной форме.
+            <programlisting language="delphi"> 
+procedure TCustomerForm.CustomerEditorClose (Sender: TObject;
+  var Action: TCloseAction);
+begin
+  if TForm(Sender).ModalResult &lt;&gt; mrOK then
+  begin
+    // отменяем все изменения
+    qryCustomer.Cancel;
+    qryCustomer.CancelUpdates;
+    // возвращаем набор данных в обычный режим обновления
+    qryCustomer.CachedUpdates := False;
+    // и позволяем закрыть форму
+    Action := caFree;
+    Exit;
+  end;
+
+  try
+    // подтверждаем изменения на уровне набора данных
+    qryCustomer.Post;
+    // стартуем транзакцию
+    trWrite.StartTransaction;
+    // если в наборе данных есть изменения
+    if (qryCustomer.ApplyUpdates = 0) then
+    begin
+      // записываем их в БД
+      qryCustomer.CommitUpdates;
+      // и подтверждаем транзакцию
+      trWrite.Commit;
+    end
+    else begin
+      raise Exception.Create(qryCustomer.RowError.Message);
+    end;
+    qryCustomer.CachedUpdates := False;
+    Action := caFree;
+  except
+    on E: Exception do
+    begin
+      // откатываем транзакцию
+      if trWrite.Active then
+        trWrite.Rollback;
+      Application.ShowException(E);
+      // Не закрываем окно, даём возможность исправить ошибку
+      Action := caNone;
+    end;
+  end;
+end;
+                </programlisting>
+        </para>
+        <para>Из кода видно, что до тех пор, пока кнопка OK не нажата, пишущая транзакция не
+            стартует вовсе. Таким образом, пишущая транзакция активна только на время переноса
+            данных из буфера набора данных в базу данных. Поскольку мы копим в буфере не более одной
+            записи, транзакция будет активна очень короткое время, что и требовалось.</para>
+
+        <para>Справочник товаров делается аналогично справочнику заказчиков. Однако в нём мы
+            продемонстрируем другой способ получения автоинкрементных значений.</para>
+
+        <para>Основной запрос будет выглядеть следующим образом:
+            <programlisting language="sql"> 
+SELECT
+    product_id,
+    name,
+    price,
+    description
+FROM product
+ORDER BY name
+                </programlisting>
+        </para>
+        <para>Свойство компонента <varname>TFDUpdateSQL.InsertSQL</varname> будет содержать
+            следующий запрос:
+            <programlisting language="sql"> 
+INSERT INTO PRODUCT
+(NAME, PRICE, DESCRIPTION)
+VALUES (:NEW_NAME, :NEW_PRICE, :NEW_DESCRIPTION)
+RETURNING PRODUCT_ID
+                </programlisting>
+        </para>
+        <para>В этом запросе появилось предложение RETURNING, которое вернёт значение поля
+            PRODUCT_ID после изменения его в BEFORE INSERT триггере. В этом случае не имеет смысла
+            выставлять значение свойства <varname>UpdateOptions.GeneratorName</varname>. Кроме того,
+            полю PRODUCT_ID необходимо выставить свойства <code language="delphi">Required =
+                False</code> и <code language="delphi">ReadOnly = True</code>, поскольку значение
+            этого свойства не вносится напрямую. В остальном всё примерно также как это организовано
+            для справочника производителей.</para>
+    </section>
+
+    <section>
+        <title>Создание журналов</title>
+
+        <para>В нашем приложении будет один журнал «Счёт-фактуры». В отличие от справочников журналы
+            содержат довольно большое количество записей и являются часто пополняемыми.</para>
+
+        <para>Счёт-фактура — состоит из заголовка, где описываются общие атрибуты (номер, дата,
+            заказчик …), и строк счёт-фактуры со списком товаром, их количеством, стоимостью и т.д.
+            Для таких документов удобно иметь два грида: в главном отображаются данные о шапке
+            документа, а в детализирующем — список товаров. Таким образом, на форму документа нам
+            потребуется поместить два компонента <classname>TDBGrid</classname>, к каждому из
+            которых привязать свой <classname>TDataSource</classname>, которые в свою очередь будут
+            привязаны к своим <classname>TFDQuery</classname>. В нашем случае набор данных с шапками
+            документы будет называться <varname>qryInvoice</varname>, а со строками документа
+                <varname>qryInvoiceLine</varname>.</para>
+
+        <para>В свойстве <varname>Transaction</varname> обоих наборов данных укажем ReadOnly
+            транзакцию <varname>trRead</varname>, которая была создана в главном датамодуле проекта.
+            В свойстве <varname>UpdateTransaction</varname> указываем транзакцию
+                <varname>trWrite</varname>, в свойстве <varname>Connection</varname> — соединение,
+            расположенное в главном датамодуле.</para>
+
+        <para>Большинство журналов содержат поле с датой создания документа. Чтобы уменьшить
+            количество выбираемых данных обычно принято вводить такое понятие как рабочий период для
+            того, чтобы уменьшить объём данных передаваемый на клиента. Рабочий период — это
+            диапазон дат, внутри которого требуются рабочие документы. Поскольку приложение может
+            содержать более одного журнала, то имеет смысл разместить переменные, содержащие дату
+            начала и окончания рабочего периода, в глобальном датамодуле <varname>dmMain</varname>,
+            который, так или иначе, используется всеми модулями, работающими с БД. При старте
+            приложения рабочий период обычно инициализируется датой начала и окончания текущего
+            квартала (могут быть другие варианты). В ходе работы приложения можно изменить рабочий
+            период по желанию пользователя.</para>
+
+        <para>
+            <figure>
+                <title>Форма журнала Invoices</title>
+                <mediaobject>
+                    <imageobject>
+                        <imagedata fileref="images/firedac-invoices-form.png" width="680"/>
+                    </imageobject>
+                    <textobject>
+                        <phrase>Форма журнала Invoices.</phrase>
+                    </textobject>
+                </mediaobject>
+            </figure>
+        </para>
+
+        <para>Поскольку чаще всего требуются именно последние введённые документы, то имеет смысл
+            сортировать их по дате в обратном порядке. С учётом вышесказанного, в свойстве SQL
+            набора данных qryInvoice запрос будет выглядеть следующим образом:
+            <programlisting language="sql"> 
+SELECT
+  invoice.invoice_id AS invoice_id,
+  invoice.customer_id AS customer_id,
+  customer.NAME AS customer_name,
+  invoice.invoice_date AS invoice_date,
+  invoice.total_sale AS total_sale,
+  IIF(invoice.payed=1, 'Yes', 'No') AS payed 
+FROM
+  invoice
+  JOIN customer ON customer.customer_id = invoice.customer_id 
+WHERE invoice.invoice_date BETWEEN :date_begin AND :date_end
+ORDER BY invoice.invoice_date DESC
+                </programlisting>
+        </para>
+
+        <para>При открытии этого набора данных необходимо будет инициализировать параметры запроса:
+            <programlisting language="delphi"> 
+qryInvoice.ParamByName('date_begin').AsSqlTimeStamp := dmMain.BeginDateSt;
+qryInvoice.ParamByName('date_end').AsSqlTimeStamp := dmMain.EndDateSt;
+qryInvoice.Open;
+                </programlisting>
+        </para>
+
+        <para>Все операции над счёт-фактурой будем производить с помощью хранимых процедур, хотя в
+            более простых случаях это можно делать и с помощью обычных запросов
+            INSERT/UPDATE/DELETE. </para>
+
+        <para>Каждую хранимую процедуру будем выполнять как отдельный запрос в компонентах
+                <classname>TFDCommand</classname>. Этот компонент не является предком
+                <classname>TFDRdbmsDataSet</classname>, не буферизирует данные и возвращает максимум
+            одну строку результата, поэтому его использование несёт меньше накладных расходов для
+            запросов, не возвращающих данные. Поскольку наши хранимые процедуры выполняют
+            модификацию данных, то свойство <varname>Transaction</varname> компонентов
+                <classname>TFDCommand</classname> необходимо установить транзакцию
+                <varname>trWrite</varname>.</para>
+
+        <note>
+            <para>Хранимые процедуры вставки, редактирования и добавления записи можно также
+                разместить в соответствующих свойствах компонента
+                    <classname>TFDUpdateSQL</classname>.</para>
+        </note>
+
+        <para>Для работы с шапкой счёт-фактуры предусмотрено четыре операции: добавление,
+            редактирование, удаление и установка признака «оплачено». Как только счёт-фактура
+            оплачена, мы запрещаем любые её модификации, как в шапке, так и в строках. Это сделано
+            на уровне хранимых процедур. Приведём тексты запросов для вызова хранимых
+            процедур.</para>
+
+        <formalpara>
+            <title>qryAddInvoice.CommandText:</title>
+
+            <para>
+                <programlisting language="sql"> 
+EXECUTE PROCEDURE sp_add_invoice(
+  NEXT VALUE FOR gen_invoice_id, 
+  :CUSTOMER_ID, 
+  :INVOICE_DATE
+)
+                </programlisting>
+            </para>
+        </formalpara>
+
+        <formalpara>
+            <title>qryEditInvoice.CommandText:</title>
+
+            <para>
+                <programlisting language="sql"> 
+EXECUTE PROCEDURE sp_edit_invoice(
+  :INVOICE_ID, 
+  :CUSTOMER_ID, 
+  :INVOICE_DATE
+)
+                </programlisting>
+            </para>
+        </formalpara>
+
+        <formalpara>
+            <title>qryDeleteInvoice.CommandText:</title>
+
+            <para>
+                <programlisting language="sql"> 
+EXECUTE PROCEDURE sp_delete_invoice(:INVOICE_ID)
+                </programlisting>
+            </para>
+        </formalpara>
+
+        <formalpara>
+            <title>qryPayForInvoice.CommandText:</title>
+
+            <para>
+                <programlisting language="sql"> 
+EXECUTE PROCEDURE sp_pay_for_inovice(:invoice_id)
+                </programlisting>
+            </para>
+        </formalpara>
+
+        <para>Поскольку наши хранимые процедуры вызываются не из компонента
+                <classname>TFDUpdateSQL</classname>, то после их выполнения необходимо вызвать
+                <methodname>qryInvoice.Refresh</methodname> для обновления данных в гриде.</para>
+
+        <para>Вызов хранимых процедур, для которых не требуется ввод данных, производится следующим
+            образом:
+            <programlisting language="delphi"> 
+if MessageDlg('Вы действительно хотите удалить счёт фактуру?', mtConfirmation,
+  [mbYes, mbNo], 0) = mrYes then
+begin
+  // Стартуем транзакцию
+  trWrite.StartTransaction;
+  try
+    qryDeleteInvoice.ParamByName('INVOICE_ID').AsInteger :=
+      qryInvoice.FieldByName('INVOICE_ID').AsInteger;
+    // выполнение хранимой процедуры
+    qryDeleteInvoice.Execute;
+    // подтверждение транзакции
+    trWrite.Commit;
+    // обновление данных в гриде
+    qryInvoice.Refresh;
+  except
+    on E: EFDDBEngineException do
+    begin
+      if trWrite.Active then
+        trWrite.Rollback;
+      Application.ShowException(E);
+    end;
+  end;
+end;
+                </programlisting>
+        </para>
+
+        <para>Для добавления новой записи и редактирования существующей, как и в случае со
+            справочниками мы будем использовать модальные формы. В данном случае мы не будем
+            использовать DBAware компоненты. Ещё одна особенность - для выбора заказчика мы будем
+            использовать компонент <classname>TButtonedEdit</classname>. Он будет отображать
+            наименование текущего заказчика, а по нажатию кнопки вызывать модальную форму с гридом
+            для выбора заказчика. Конечно, можно было бы воспользоваться чем-то вроде
+                <classname>TDBLookupCombobox</classname>, но, во-первых заказчиков может быть очень
+            много и пролистывать такой выпадающий список будет неудобно, во-вторых для поиска
+            нужного заказчика одного названия может быть недостаточно.</para>
+
+        <para>
+            <figure>
+                <title>Форма редактирования счёт-фактуры</title>
+                <mediaobject>
+                    <imageobject>
+                        <imagedata fileref="images/firedac-editinvoice-form.png" width="680"/>
+                    </imageobject>
+                    <textobject>
+                        <phrase>Форма редактирования счёт-фактуры.</phrase>
+                    </textobject>
+                </mediaobject>
+            </figure>
+        </para>
+
+        <para>В качестве модальной окна для выбора заказчика используем ту же форму, что была
+            создана для ввода заказчиков. Код обработчика нажатия кнопки в компоненте
+                <classname>TButtonedEdit</classname> будет выглядеть следующим образом:
+            <programlisting language="delphi"> 
+procedure TEditInvoiceForm.edtCustomerRightButtonClick(Sender: TObject);
+var
+  xSelectForm: TCustomerForm;
+begin
+  xSelectForm := TCustomerForm.Create(Self);
+  try
+    xSelectForm.Visible := False;
+    if xSelectForm.ShowModal = mrOK then
+    begin
+      FCustomerId := xSelectForm.qryCustomer.FieldByName('CUSTOMER_ID')
+        .AsInteger;
+      edtCustomer.Text := xSelectForm.qryCustomer.FieldByName('NAME').AsString;
+    end;
+  finally
+    xSelectForm.Free;
+  end;
+end;
+                </programlisting>
+        </para>
+        <para>Поскольку мы используем не DBAware компоненты, то при вызове формы редактирования нам
+            будет необходимо инициализировать код заказчика и его наименование для отображения.
+            <programlisting language="delphi"> 
+procedure TInvoiceForm.actEditInvoiceExecute(Sender: TObject);
+var
+  xEditor: TEditInvoiceForm;
+begin
+  xEditor := TEditInvoiceForm.Create(Self);
+  try
+    xEditor.InvoiceForm := Self;
+    xEditor.EditMode := emInvoiceEdit;
+    xEditor.Caption := 'Редактирование счёт-фактуры';
+
+    xEditor.InvoiceId := qryInvoice.FieldByName('INVOICE_ID').AsInteger;
+    xEditor.SetCustomer(qryInvoice.FieldByName('CUSTOMER_ID').AsInteger,
+                        qryInvoice.FieldByName('CUSTOMER_NAME').AsString);
+    xEditor.InvoiceDate := qryInvoice.FieldByName('INVOICE_DATE').AsDateTime;
+
+    xEditor.ShowModal;
+  finally
+    xEditor.Free;
+  end;
+end;
+
+procedure TEditInvoiceForm.SetCustomer(ACustomerId: Integer;
+  const ACustomerName: string);
+begin
+  FCustomerId := ACustomerId;
+  edtCustomer.Text := ACustomerName;
+end;
+                </programlisting>
+        </para>
+        <para>Обработку добавления новой счёт-фактуры и редактирование существующей будем
+            осуществлять в событии закрытия модальной формы, также, как это сделано для
+            справочников. Однако здесь мы уже не будем переводить набор данных в режим
+                <varname>CachedUpdates</varname>, поскольку модификация производится с помощью
+            хранимых процедур, и мы не используем DBAware компоненты. </para>
+        <para>
+            <programlisting language="delphi"> 
+procedure TEditInvoiceForm.FormClose(Sender: TObject; var Action: TCloseAction);
+var
+  xCustomerId: Integer;
+begin
+  // если форма закрыта не по нажатию кнопки OK, 
+  // то вообще ничего не делаем. Транзакция не стартует.
+  if ModalResult &lt;&gt; mrOK then
+  begin
+    Action := caFree;
+    Exit;
+  end;
+
+  // Выполняем всё в короткой транзакции
+  FInvoiceForm.trWrite.StartTransaction;
+  try
+    if FEditMode = emInvoiceAdd then
+    begin
+      // если FcustomerId = 0, то прамаетру CUSTOMER_ID выставляем значение NULL 
+      if FCustomerId &lt;&gt; 0 then
+        FInvoiceForm.qryAddInvoice.ParamByName('CUSTOMER_ID').AsInteger :=
+          FCustomerId
+      else
+        FInvoiceForm.qryAddInvoice.ParamByName('CUSTOMER_ID').Clear;
+
+      FInvoiceForm.qryAddInvoice.ParamByName('INVOICE_DATE').AsSQLTimeStamp :=
+        DateTimeToSQLTimeStamp(FInvoiceDate);
+      // выполяем хранимую процедуру для вставки записи
+      FInvoiceForm.qryAddInvoice.Execute();
+    end;
+    if FEditMode = emInvoiceEdit then
+    begin
+      FInvoiceForm.qryEditInvoice.ParamByName('INVOICE_ID').AsInteger :=
+        FInvoiceId;
+      FInvoiceForm.qryEditInvoice.ParamByName('CUSTOMER_ID').AsInteger :=
+        FCustomerId;
+      FInvoiceForm.qryEditInvoice.ParamByName('INVOICE_DATE').AsSQLTimeStamp :=
+        DateTimeToSQLTimeStamp(FInvoiceDate);
+      // выполняем хранимую процедуру для редактирования записи
+      FInvoiceForm.qryEditInvoice.Execute();
+    end;
+    // подтверждение транзакции
+    FInvoiceForm.trWrite.Commit;
+    // обновление данных в гриде
+    FInvoiceForm.qryInvoice.Refresh;
+
+    Action := caFree;
+  except
+    on E: Exception do
+    begin
+      if FInvoiceForm.trWrite.Active then
+        FInvoiceForm.trWrite.Rollback;
+      Application.ShowException(E);
+      // Не закрываем модальное окно. Даём пользователю возможность
+      // исправить ошибку
+      Action := caNone;
+    end;
+  end;
+end;
+                </programlisting>
+        </para>
+
+        <para>Теперь перейдём к позициям накладной. Набору данных <varname>qryInvoiceLine</varname>
+            установим свойство <code>MasterSource = MasterSource</code>, который привязан к
+                <varname>qryInvoice</varname>, а свойство <code>MasterFields = INVOICE_ID</code>. В
+            свойстве SQL напишем следующий запрос:
+            <programlisting language="sql"> 
+SELECT
+    invoice_line.invoice_line_id AS invoice_line_id,
+    invoice_line.invoice_id AS invoice_id,
+    invoice_line.product_id AS product_id,
+    product.name AS productname,
+    invoice_line.quantity AS quantity,
+    invoice_line.sale_price AS sale_price,
+    invoice_line.quantity * invoice_line.sale_price AS total
+FROM
+    invoice_line
+JOIN product ON product.product_id = invoice_line.product_id
+WHERE invoice_line.invoice_id = :invoice_id
+                </programlisting>
+        </para>
+        <para>Все модификации, как и в случае с шапкой счёт-фактуры, будем осуществлять с помощью
+            хранимых процедур. Приведём тексты запросов для вызова хранимых процедур.</para>
+        <formalpara>
+            <title>qryAddInvoiceLine.CommandText:</title>
+
+            <para>
+                <programlisting language="sql"> 
+EXECUTE PROCEDURE sp_add_invoice_line(
+  :invoice_id, 
+  :product_id, 
+  :quantity
+)
+                </programlisting>
+            </para>
+        </formalpara>
+        <formalpara>
+            <title>qryEditInvoiceLine.CommandText:</title>
+
+            <para>
+                <programlisting language="sql"> 
+EXECUTE PROCEDURE sp_edit_invoice_line(
+  :invoice_line_id,
+  :quantity
+)
+                </programlisting>
+            </para>
+        </formalpara>
+        <formalpara>
+            <title>qryDeleteInvoiceLine.CommandText:</title>
+
+            <para>
+                <programlisting language="sql"> 
+EXECUTE PROCEDURE sp_delete_invoice_line(
+  :invoice_line_id
+)
+                </programlisting>
+            </para>
+        </formalpara>
+
+        <para>Форма для добавления новой записи и редактирования существующей, как и в случае с
+            шапкой не будет использовать DBAware. Для выбора товара мы будем использовать компонент
+                <classname>TButtonedEdit</classname>. Код обработчика нажатия кнопки в компоненте
+                <classname>TButtonedEdit</classname> будет выглядеть следующим образом:
+            <programlisting language="delphi"> 
+procedure TEditInvoiceLineForm.edtProductRightButtonClick(Sender: TObject);
+var
+  xSelectForm: TGoodsForm;
+begin
+  // не позволяем изменять товар в режиме редактирования
+  // это можно сделать только при добавлении новой позиции
+  if FEditMode = emInvoiceLineEdit then
+    Exit;
+
+  xSelectForm := TGoodsForm.Create(Self);
+  try
+    xSelectForm.Visible := False;
+    if xSelectForm.ShowModal = mrOK then
+    begin
+      FProductId := xSelectForm.qryGoods.FieldByName('PRODUCT_ID')
+        .AsInteger;
+      edtProduct.Text := xSelectForm.qryGoods.FieldByName('NAME').AsString;
+      // в данном случае мы копируем также цену по прайсу
+      edtPrice.Text := xSelectForm.qryGoods.FieldByName('PRICE').AsString;
+    end;
+  finally
+    xSelectForm.Free;
+  end;
+end;
+                </programlisting>
+        </para>
+        <para>Поскольку мы используем не DBAware компоненты, то при вызове формы редактирования нам
+            будет необходимо инициализировать код товара, его наименование и стоимость для
+            отображения.
+            <programlisting language="delphi"> 
+procedure TInvoiceForm.actEditInvoiceLineExecute(Sender: TObject);
+var
+  xEditor: TEditInvoiceLineForm;
+begin
+  xEditor := TEditInvoiceLineForm.Create(Self);
+  try
+    xEditor.InvoiceForm := Self;
+    xEditor.EditMode := emInvoiceLineEdit;
+    xEditor.Caption := 'Редактирование позиции';
+
+    xEditor.InvoiceLineId := qryInvoiceLine.FieldByName('INVOICE_LINE_ID').AsInteger;
+    xEditor.SetProduct(qryInvoiceLine.FieldByName('PRODUCT_ID').AsInteger,
+                       qryInvoiceLine.FieldByName('PRODUCTNAME').AsString,
+                       qryInvoiceLine.FieldByName('SALE_PRICE').AsCurrency);
+    xEditor.Quantity := qryInvoiceLine.FieldByName('QUANTITY').AsInteger;
+
+    xEditor.ShowModal;
+  finally
+    xEditor.Free;
+  end;
+end;
+
+procedure TEditInvoiceLineForm.SetProduct(AProductId: Integer;
+  AProductName: string; APrice: Currency);
+begin
+  FProductId := AProductId;
+  edtProduct.Text := AProductName;
+  edtPrice.Text := CurrToStr(APrice);
+end;
+                </programlisting>
+        </para>
+        <para>Обработку добавления новой позиции и редактирование существующей будем производить в
+            событии закрытия модальной формы.
+            <programlisting language="delphi"> 
+procedure TEditInvoiceLineForm.FormClose(Sender: TObject;
+  var Action: TCloseAction);
+var
+  xCustomerId: Integer;
+begin
+  // если форма закрыта не по нажатию кнопки OK, 
+  // то вообще ничего не делаем. Транзакция не стартует.
+  if ModalResult &lt;&gt; mrOK then
+  begin
+    Action := caFree;
+    Exit;
+  end;
+
+  // Всё делаем в короткой транзакции
+  FInvoiceForm.trWrite.StartTransaction;
+  try
+    if FEditMode = emInvoiceLineAdd then
+    begin
+      FInvoiceForm.qryAddInvoiceLine.ParamByName('INVOICE_ID').AsInteger :=
+        FInvoiceId;
+
+      if FProductId = 0 then
+        raise Exception.Create('Не выбран товар');
+        
+
+      FInvoiceForm.qryAddInvoiceLine.ParamByName('PRODUCT_ID').AsInteger :=
+        FProductId;
+      FInvoiceForm.qryAddInvoiceLine.ParamByName('QUANTITY').AsInteger :=
+        FQuantity;
+      // Выполняем хранимую процедуру для добавления позиции 
+      FInvoiceForm.qryAddInvoiceLine.Execute();
+    end;
+
+    if FEditMode = emInvoiceLineEdit then
+    begin
+      FInvoiceForm.qryEditInvoiceLine.ParamByName('INVOICE_LINE_ID').AsInteger :=
+        FInvoiceLineId;
+      FInvoiceForm.qryEditInvoiceLine.ParamByName('QUANTITY').AsInteger :=
+        FQuantity;
+      // Выполняем хранимую процедуру для редактирования  
+      FInvoiceForm.qryEditInvoiceLine.Execute();
+    end;
+    // Подтверждаем транзакцию
+    FInvoiceForm.trWrite.Commit;
+    // Обновляем оба грида
+    FInvoiceForm.qryInvoice.Refresh;
+    FInvoiceForm.qryInvoiceLine.Refresh;
+
+    Action := caFree;
+  except
+    on E: Exception do
+    begin
+      if FInvoiceForm.trWrite.Active then
+        FInvoiceForm.trWrite.Rollback;
+      Application.ShowException(E);
+      // Не загрываем окно редактирования. Позволяем пользователю исправить ошибку
+      Action := caNone;
+    end;
+  end;
+end;
+                </programlisting>
+        </para>
+        <para>В итоге у нас получилось приложение которое выглядит следующим образом: <figure>
+                <title>Скриншот работающего приложения</title>
+                <mediaobject>
+                    <imageobject>
+                        <imagedata fileref="images/firedac-screen.png" width="680"/>
+                    </imageobject>
+                    <textobject>
+                        <phrase>Скриншот работающего приложения.</phrase>
+                    </textobject>
+                </mediaobject>
+            </figure>
+        </para>
+    </section>
+
+    <section>
+        <title>Заключение</title>
+
+        <para>Для работы с СУБД Firebird в Delphi существует множество различных компонентов доступа
+            (Interbase Express (IBX), FibPlus, UIB, UniDAC, IBDac, FireDac). FireDac является
+            стандартным набором компонентов доступа к различным базам данных начиная с Delphi XE3. </para>
+
+        <para>Все запросы к базе данных происходят в рамках транзакции. Для корректной работы
+            приложений с базой данных желательно управлять транзакциями вручную, то есть явно
+            вызывать методы <methodname>StartTransaction</methodname>,
+                <methodname>Commit</methodname> и <methodname>Rollback</methodname> компонента
+                <classname>TFDTransaction</classname>. Вы можете использовать столько транзакций
+            сколько требует логика вашего приложения. По возможности все транзакции должны быть
+            короткими.</para>
+        <para>Если требуется длинная читающая транзакция для просмотра журналов или справочников, то
+            такую транзакцию желательно стартовать с параметрами READ READ_COMMITED REC_VERSION. Вы
+            можете стартовать одну такую транзакцию на все журналы/справочники или по одной
+            транзакции на каждый журнал/справочник.</para>
+        <para>Пишущие транзакции должны быть максимально короткими. Если вы используете сложную
+            логику при редактировании данных (изменение нескольких таблиц, расчёты хранимых
+            агрегатов и др.), то необходимо использовать режим изолированности SNAPSHOT. Для того
+            чтобы не удерживать транзакцию во время редактирования в формах редактирования,
+            необходимо либо отказаться от DBAware компонентов, либо использовать режим
+                <varname>CachedUpdates</varname>. Режим <varname>CachedUpdates</varname> позволяет
+            держать транзакцию активной только на очень короткий промежуток времени, а именно на
+            время внесения изменений.</para>
+        <para>При построение отчётных форм, особенно когда выполняется множество запросов,
+            необходимо использовать транзакцию с режимом изолированности SNAPSHOT.</para>
+        <para>Для возможности редактирования набора данных необходимо использовать компонент
+                <classname>TFDUpdateSQL</classname> и заполнить его свойства
+                <varname>InsertSQL</varname>, <varname>ModifySQL</varname>,
+                <varname>DeleteSQL</varname> и <varname>FetchRowSQL</varname>. Эти свойства могут
+            быть сгенерированы мастером, но после этого может потребоваться некоторая правка. </para>
+        <para>Для работы с автоинкрементными первичными ключами существует 2 способа:<itemizedlist>
+                <listitem>
+                    <para>Предварительное получение значения генератора. Для этого необходимо
+                        установить значение свойств компонента <classname>TFDQuery</classname>
+                        <varname>UpdateOptions.GeneratorName</varname> и
+                            <varname>UpdateOptions.AutoIncFields</varname>.</para>
+                </listitem>
+                <listitem>
+                    <para>Получение значения первичного ключа с помощью предложения RETURNING,
+                        которое необходимо дописать в запросе <varname>InsertSQL</varname>. В этом
+                        случае полю необходимо выставить свойства <code>Required = False</code> и
+                            <code>ReadOnly = True</code>, поскольку значение этого свойства не
+                        вносится напрямую. </para>
+                </listitem>
+            </itemizedlist></para>
+        <para>Более сложную бизнес логику удобно реализовать используя хранимые процедуры. Хранимые
+            процедуры, которые не возвращают данные, удобно выполнять с помощью компонента
+                <classname>TFDCommand</classname>.</para>
+
+        <para>Исходные коды примера приложения вы можете получить по ссылке <link
+                xmlns:xlink="http://www.w3.org/1999/xlink"
+                xlink:href="https://github.com/sim1984/FireDacEx"
+                >https://github.com/sim1984/FireDacEx</link></para>
+    </section>
+</chapter>

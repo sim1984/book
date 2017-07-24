@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project version="16.0">
+<project version="16.1">
     <meta>
         <filters directoryPatterns="" filePatterns="" positiveFilePatterns="" showHiddenFiles="false"/>
         <options>
-            <serialized version="16.0" xml:space="preserve">
+            <serialized version="16.1" xml:space="preserve">
                 <serializableOrderedMap>
                     <entry>
                         <String>scenario.associations</String>
@@ -66,7 +66,7 @@
                                     <String></String>
                                 </field>
                                 <field name="inputXSLURL">
-                                    <String>file:/g:/fbdoc/book/xsl/fo.xsl</String>
+                                    <String>file:/d:/fbdoc/book/xsl/fo.xsl</String>
                                 </field>
                                 <field name="inputXMLURL">
                                     <String>${currentFileURL}</String>
@@ -88,6 +88,9 @@
                                 </field>
                                 <field name="outputFile">
                                     <File>${cfd}/out/pdf/${cfn}.pdf</File>
+                                </field>
+                                <field name="outputResource">
+                                    <String>${cfd}\out\pdf\${cfn}.pdf</String>
                                 </field>
                                 <field name="openOtherLocationInBrowser">
                                     <Boolean>false</Boolean>
@@ -137,10 +140,29 @@
     </meta>
     <projectTree name="book.xpr">
         <folder path="xsl/"/>
+        <file name="administration.xml"/>
+        <file name="app-db.xml"/>
+        <file name="app-delphi.xml"/>
+        <file name="app-dotnet-aspnet.xml"/>
+        <file name="app-dotnet-winform.xml"/>
+        <file name="app-java-spring.xml"/>
+        <file name="app-php.xml"/>
         <file name="app.xml"/>
         <file name="book.xml"/>
         <file name="config.xml"/>
+        <file name="constraints.xml"/>
+        <file name="ddl.xml"/>
+        <file name="dml.xml"/>
+        <file name="fb-extensions.xml"/>
+        <file name="indexes.xml"/>
         <file name="intro.xml"/>
+        <file name="psql.xml"/>
+        <file name="quick-start.xml"/>
+        <file name="security.xml"/>
+        <file name="sequences.xml"/>
+        <file name="tables.xml"/>
+        <file name="transactions.xml"/>
         <file name="types.xml"/>
+        <file name="views.xml"/>
     </projectTree>
 </project>

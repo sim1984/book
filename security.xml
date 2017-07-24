@@ -1,0 +1,17 @@
+<!DOCTYPE part>
+<part xmlns="http://docbook.org/ns/docbook" version="5.0" xml:id="security" xml:lang="ru"
+    xmlns:xi="http://www.w3.org/2001/XInclude">
+    <info>
+        <title>Безопасность</title>
+    </info>
+    
+    <chapter>
+        <info>
+            <title>Пользователи</title>
+        </info>
+        
+        <para/>
+    </chapter>
+    
+
+</part>
