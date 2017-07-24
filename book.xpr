@@ -66,7 +66,7 @@
                                     <String></String>
                                 </field>
                                 <field name="inputXSLURL">
-                                    <String>file:/d:/fbdoc/book/xsl/fo.xsl</String>
+                                    <String>file:/g:/fbdoc/book/xsl/fo.xsl</String>
                                 </field>
                                 <field name="inputXMLURL">
                                     <String>${currentFileURL}</String>
