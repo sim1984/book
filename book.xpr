@@ -1,28 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project version="16.1">
+<project version="16.0">
     <meta>
         <filters directoryPatterns="" filePatterns="" positiveFilePatterns="" showHiddenFiles="false"/>
         <options>
-            <serialized version="16.1" xml:space="preserve">
+            <serialized version="16.0" xml:space="preserve">
                 <serializableOrderedMap>
                     <entry>
                         <String>scenario.associations</String>
                         <scenarioAssociation-array>
-                            <scenarioAssociation>
-                                <field name="url">
-                                    <String>book.xml</String>
-                                </field>
-                                <field name="scenarioIds">
-                                    <list>
-                                        <String>DocBook PDF FBDoc</String>
-                                    </list>
-                                </field>
-                                <field name="scenarioTypes">
-                                    <list>
-                                        <String>XSL</String>
-                                    </list>
-                                </field>
-                            </scenarioAssociation>
                             <scenarioAssociation>
                                 <field name="url">
                                     <String>book.xml</String>
@@ -89,9 +74,6 @@
                                 <field name="outputFile">
                                     <File>${cfd}/out/pdf/${cfn}.pdf</File>
                                 </field>
-                                <field name="outputResource">
-                                    <String>${cfd}\out\pdf\${cfn}.pdf</String>
-                                </field>
                                 <field name="openOtherLocationInBrowser">
                                     <Boolean>false</Boolean>
                                 </field>
@@ -156,6 +138,7 @@
         <file name="fb-extensions.xml"/>
         <file name="indexes.xml"/>
         <file name="intro.xml"/>
+        <file name="procedures.xml"/>
         <file name="psql.xml"/>
         <file name="quick-start.xml"/>
         <file name="security.xml"/>

@@ -66,7 +66,7 @@
     <!-- Подсветка синтаксиса -->
     <xsl:param name="highlight.source" select="1"/>
     <xsl:param name="highlight.xslthl.config"
-        >file:/d:/fbdoc/book/xsl/highlighting/xslthl-config.xml</xsl:param>
+        >file:/g:/fbdoc/book/xsl/highlighting/xslthl-config.xml</xsl:param>
     <!-- формат нумерации страниц -->
     <xsl:template name="initial.page.number">auto</xsl:template>
     <xsl:template name="page.number.format">1</xsl:template>

@@ -89,6 +89,7 @@
                     </para>
                 </listitem>
             </itemizedlist></para>
+
         <para>Далее описан процесс установки:<orderedlist>
                 <listitem>
                     <para>Устанавливаем
@@ -107,7 +108,7 @@
                 </listitem>
                 <listitem>
                     <para>Необходимо установить сборки Firebird в GAC. Для удобство пописываем в
-                        %PATH% путь до утилиты <application>gacutil</application> для .NET Framework
+                        <filename>%PATH%</filename> путь до утилиты <application>gacutil</application> для .NET Framework
                         4.5. У меня этот путь <filename>c:\Program Files (x86)\Microsoft
                             SDKs\Windows\v10.0A\bin\NETFX 4.6.1 Tools\</filename></para>
                 </listitem>
@@ -169,7 +170,7 @@ gacutil /i EntityFramework.Firebird.dll
                         меняем его на полный путь к файлу
                             <filename>FirebirdSql.VisualStudio.DataTools.dll</filename>
                         <programlisting>
-   "CodeBase"="c:\\Program Files (x86)\\FirebirdDDEX\\FirebirdSql.VisualStudio.DataTools.dll"                         
+"CodeBase"="c:\\Program Files (x86)\\FirebirdDDEX\\FirebirdSql.VisualStudio.DataTools.dll"                         
                         </programlisting>
                     </para>
                 </listitem>
@@ -177,18 +178,18 @@ gacutil /i EntityFramework.Firebird.dll
                     <para>Сохраняем этот файл, запускаем его. На запрос добавить информацию в реестр
                         нажимаем ДА.</para>
                 </listitem>
+
                 <listitem>
                     <para>Теперь нужно отредактировать файл machine.config, в моем случае он
                         находится по пути:
                             <filename>C:\Windows\Microsoft.NET\Framework\v4.0.30319\Config</filename></para>
-                    <para>Открываем этот файл блокнотом. Находим секцию <programlisting language="xml">
+                   <para>Открываем этот файл блокнотом. Находим секцию <programlisting language="javascript">
 <![CDATA[
-  <system.data>
+<system.data>
     <DbProviderFactories>
-
 ]]>                            
                         </programlisting> Добавляем в эту секцию
-                        строчку: <programlisting language="xml">
+                        строчку: <programlisting language="javascript">
 <![CDATA[
 <add name="FirebirdClient Data Provider" 
      invariant="FirebirdSql.Data.FirebirdClient" 
@@ -212,7 +213,9 @@ gacutil /i EntityFramework.Firebird.dll
                         Находим обозреватель серверов и пытаемся подключиться к одной из
                         существующих баз данных Firebird.</para>
                 </listitem>
+
             </orderedlist></para>
+
         <para>
             <figure>
                 <title>Добавление подключения в Visual Studio</title>
@@ -259,6 +262,7 @@ gacutil /i EntityFramework.Firebird.dll
                 </mediaobject>
             </figure>
         </para>
+        
     </section>
 
     <section>
@@ -421,7 +425,7 @@ gacutil /i EntityFramework.Firebird.dll
             подключения в файле конфигурации приложения
                     <filename><replaceable>&lt;AppName&gt;</replaceable>.exe.conf</filename>. Строка
             подключения будет сохранена в секции <emphasis role="bold">connectionStrings</emphasis>
-            примерно в таком виде <programlisting language="xml">
+            примерно в таком виде <programlisting language="javascript">
 <![CDATA[
 <add name="DbModel" 
      connectionString="character set=UTF8; data source=localhost; 
@@ -1770,4 +1774,5 @@ private void btnDiscount_Click(object sender, EventArgs e) {
                 >support@ibase.ru</link>, <link xmlns:xlink="http://www.w3.org/1999/xlink"
                 xlink:href="mailto:support@ib-aid.com">support@ib-aid.com</link></para>
     </section>
+
 </chapter>

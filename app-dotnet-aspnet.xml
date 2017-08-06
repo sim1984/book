@@ -290,7 +290,7 @@
             вы просто можете перенести кассы моделей в папку <filename>Models</filename>. В
             противном случае вам необходимо будет создать их с нуля. Подробно процесс создания EDM
             модели описан в предыдущей главе «Создание приложений с использованием Entity Framework»
-            (см. раздел <link linkend="app-dotnet-createedm">«Создание EDM модели»</link>).</para>
+            (см. раздел «<link linkend="app-dotnet-createedm">Создание EDM модели</link>»).</para>
 
         <para>Существует одно небольшое отличие. В процессе работы мастера создания модели у вас
             спросят, как хранить строку подключения. <figure>
@@ -313,7 +313,7 @@
             это изменить в готовом приложении, просто отредактировав строку подключения в файле
             конфигурации приложения
             <filename><replaceable>AppName</replaceable>.exe.conf</filename>. Строка подключения
-            будет сохранена в секции connectionStrings примерно в таком виде <programlisting language="xml">
+            будет сохранена в секции connectionStrings примерно в таком виде <programlisting language="javascript">
 <![CDATA[
 <add name="DbModel" 
      connectionString="character set=UTF8; data source=localhost; 
@@ -2222,7 +2222,7 @@ function showChildGrid(parentRowID, parentRowKey) {
         <para> А в нашем приложении мы будем использовать чуть более простую модель, основанную на
             аутентификации форм. Для включения аутентификации форм необходимо сделать изменения в
             файле конфигурации <filename>web.config</filename>. Находим секцию
-            <!--CDATA[<system.web>]--> и внутри этой секции поместим следующую подсекцию: <programlisting language="xml">
+            <!--CDATA[<system.web>]--> и внутри этой секции поместим следующую подсекцию: <programlisting language="javascript">
 <![CDATA[
 <authentication mode="Forms">
   <forms name="cookies" timeout="2880" loginUrl="~/Account/Login" 
@@ -2949,7 +2949,7 @@ namespace FBMVCExample.Providers
             конфигурации. Откроем файл <filename>web.config</filename> и удалим из него определение
             провайдеров, которые были добавлены автоматически при добавлении пакета
                 <package>Microsoft.AspNet.Providers</package>. И добавим туда вместо этого в
-            пределах узла system.web добавим наш провайдер: <programlisting language="xml">
+            пределах узла system.web добавим наш провайдер: <programlisting language="javascript">
 <![CDATA[
 <system.web>
     <authentication mode="Forms">

@@ -21,7 +21,7 @@
         <para/>
     </chapter>
     
-    <chapter>
+    <chapter xml:id="udr">
         <info>
             <title>Написание UDR (внешних ХП, функций, триггеров) на Delphi/C++</title>
         </info>

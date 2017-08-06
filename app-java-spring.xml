@@ -63,7 +63,7 @@
         библиотеки.</para>
     <para>Теперь поправим файл <filename>pom.xml</filename> и пропишем в него общие свойства
         приложения, зависимости от пакетов библиотек (Spring MVC, Jaybird, JDBC пул, JOOQ) и
-        свойства JDBC подключения. <programlisting language="xml">
+        свойства JDBC подключения. <programlisting language="javascript">
 <![CDATA[
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" 
@@ -422,7 +422,7 @@ public class WebInitializer implements WebApplicationInitializer {
                 xlink:href="https://github.com/FirebirdSQL/jaybird/releases/download/v3.0.0/Jaybird-3.0.0-JDK_1.8.zip"
                 >jaybird-full-3.0.0.jar</link>.</para>
         <para>Теперь надо создать файл конфигурации <filename>example.xml</filename>, который будет
-            использован для генерации классов схемы БД. <programlisting language="xml">
+            использован для генерации классов схемы БД. <programlisting language="javascript">
 <![CDATA[
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <configuration xmlns="http://www.jooq.org/xsd/jooq-codegen-3.8.0.xsd">
