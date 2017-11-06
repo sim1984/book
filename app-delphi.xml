@@ -1,37 +1,45 @@
 <!DOCTYPE chapter>
-<chapter xmlns="http://docbook.org/ns/docbook" version="5.0" xml:id="app-delphi" xml:lang="ru">
+<chapter xmlns="http://docbook.org/ns/docbook" version="5.0" xml:id="fbdevgd30-firedac"
+    xml:lang="ru">
 
     <info>
-        <title>Создание приложений на Delphi с использованием FireDac</title>
+        <title>Разработка приложений Firebird на Delphi</title>
     </info>
 
     <para>В данной главе будет описан процесс создания приложений для СУБД Firebird с использованием
-        компонентов доступа FireDac и среды Delphi XE5. FireDac является стандартным набором
-        компонентов доступа к различным базам данных начиная с Delphi XE3.</para>
-    <para>Создайте новый проект <guimenu>File->New->VCL Forms Application - Delphi</guimenu>. В
-        новый проект добавьте новый дата модуль <guimenu>File->New->Other</guimenu>, в появившемся
-        мастере выберите <guimenu>Delphi Projects->Delphi Files->Data Module</guimenu>. Этот дата
-        модуль будет главным в нашем проекте. Он будет содержать некоторые экземпляры глобальных
-        компонентов доступа, которые должны быть доступны всем формам, которые должны работать с
-        данными. Например, таким компонентом является <classname>TFDConnection</classname>.</para>
+        компонентов доступа FireDac&#8482; и среды Embarcadero Delphi&#8482; XE5. FireDac&#8482;
+        является стандартным набором компонентов доступа к различным базам данных начиная с Delphi
+        XE3.</para>
 
-    <section>
+    <section xml:id="fbdg30-firedac-proj-start">
+        <title>Старт проекта</title>
+
+        <para>Создайте новый проект <classname>File->New->VCL Forms Application -
+            Delphi</classname>. В новый проект добавьте новый дата модуль
+                <classname>File->New->Other</classname>, в появившемся мастере выберите
+                <classname>Delphi Projects->Delphi Files->Data Module</classname>. Этот дата модуль
+            будет главным в нашем проекте. Он будет содержать некоторые экземпляры глобальных
+            компонентов доступа, которые должны быть доступны всем формам, которые должны работать с
+            данными. Например, таким компонентом является
+            <classname>TFDConnection</classname>.</para>
+    </section>
+    <section xml:id="fbdg30-firedac-tfdconnection">
         <title>Компонент TFDConnection</title>
 
         <para>Компонент <classname>TFDConnection</classname> обеспечивает подключение к различным
             типам баз данных. Будем указывать экземпляр этого компонента в свойствах
-                <varname>Connection</varname> остальных компонентов FireDac. К какому именно типу
-            баз данных будет происходить подключение, зависит от значения свойства
-                <varname>DriverName</varname>. Для доступа к Firebird нам необходимо выставить это
-            свойство в значение FB. Для того чтобы подключение знало, с какой именно библиотекой
-            доступа необходимо работать, разместим в главном дата модуле компонент
-                <classname>TFBPhysFBDriverLink</classname>. Его свойство
-                <varname>VendorLib</varname> позволяет указывать путь до клиентской библиотеки. Если
-            оно не указано, то подключение к Firebird будет осуществляться через библиотеки,
+                <classname>Connection</classname> остальных компонентов FireDac. К какому именно
+            типу баз данных будет происходить подключение, зависит от значения свойства
+                <classname>DriverName</classname>. Для доступа к Firebird нам необходимо выставить
+            это свойство в значение <classname>FB</classname>. Для того чтобы подключение знало, с
+            какой именно библиотекой доступа необходимо работать, разместим в главном дата модуле
+            компонент <classname>TFBPhysFBDriverLink</classname>. Его свойство
+                <classname>VendorLib</classname> позволяет указывать путь до клиентской библиотеки.
+            Если оно не указано, то подключение к Firebird будет осуществляться через библиотеки,
             зарегистрированные в системе, например в <filename>system32</filename>, что в ряде
             случаев может быть нежелательно.</para>
 
-        <section>
+        <section xml:id="fbdg30-firedac-libpath">
             <title>Путь к клиентской библиотеке</title>
 
             <para>Мы будем размещать необходимую библиотеку доступа в папке
@@ -45,44 +53,68 @@ FDPhysFBDriverLink.VendorLib := xAppPath + 'fbclient' + PathDelim + 'fbclient.dl
             </para>
 
             <important>
+                <title>Важное замечание о "разрядности"</title>
                 <para> Если вы компилируете 32 разрядное приложение, то вы должны использовать 32
                     разрядную библиотеку <filename>fbclient.dll</filename>. Для 64 разрядного – 64
-                    разрядную. Помимо файла <filename>fbclient.dll</filename> в ту же папку
-                    желательно поместить библиотеки <filename>msvcp80.dll</filename> и
+                    разрядную.</para>
+                <para>Помимо файла <filename>fbclient.dll</filename> в ту же папку желательно
+                    поместить библиотеки <filename>msvcp80.dll</filename> и
                         <filename>msvcr80.dll</filename> (для Firebird 2.5), и
                         <filename>msvcp100.dll</filename> и <filename>msvcr100.dll</filename> (для
                     Firebird 3.0). Эти библиотеки можно найти либо в подпапке
                         <filename>bin</filename> (Firebird 2.5), либо в корневой папке сервера
                     (Firebird 3.0). </para>
                 <para> Для того чтобы приложение правильно отображало собственные ошибки firebird,
-                    необходимо также скопировать файл <filename>firebird.msg</filename>. Для
-                    Firebird 2.5 и в более ранних версиях он должен находиться на один уровень выше
-                    каталога клиентской библиотеки, т.е. в нашем случае в каталоге приложения. Для
-                    Firebird 3 он должен находиться в каталоге клиентской библиотеки, т.е. в
-                    каталоге <filename>fbclient</filename>. </para>
+                    необходимо также скопировать файл <filename>firebird.msg</filename>.
+                        <itemizedlist spacing="compact">
+                        <listitem>
+                            <para>Для Firebird 2.5 и в более ранних версиях он должен находиться на
+                                один уровень выше каталога клиентской библиотеки, т.е. в нашем
+                                случае в каталоге приложения.</para>
+                        </listitem>
+                        <listitem>
+                            <para>Для Firebird 3 он должен находиться в каталоге клиентской
+                                библиотеки, т.е. в каталоге <filename>fbclient</filename>.</para>
+                        </listitem>
+                    </itemizedlist></para>
             </important>
 
-            <para>Если вам необходимо чтобы ваше приложение работало без установленного сервера
-                Firebird, т.е. в режиме Embedded, то для Firebird 2.5 необходимо заменить
-                    <filename>fbclient.dll</filename> на <filename>fbembed.dll</filename>. При
-                желании имя библиотеки можно вынести в конфигурационный файл вашего приложения. Для
-                Firebird 3.0 ничего изменять не требуется (режим работы зависит от строки
-                подключения и значения параметра Providers в файле
-                    <filename>firebird.conf</filename> или
-                <filename>databases.conf</filename>).</para>
+            <section xml:id="fbdg30-firedac-embedded">
+                <title>Разработка с использованием встроенного сервера</title>
 
-            <tip>
-                <para>Даже если ваше приложение будет работать с Firebird в режиме Embedded,
-                    разработку удобнее вести под полноценным сервером. Дело в том, что в режиме
-                    Embedded Firebird работает в одном адресном пространстве с вашим приложением,
-                    что может привести к нежелательным последствиям при возникновении ошибок в вашем
-                    приложении. Кроме того, в момент разработки среда Delphi и ваше приложение
-                    являются отдельными приложениями, использующими Embedded. До версии 2.5 они не
-                    могут работать с одной базой одновременно. </para>
-            </tip>
+                <para>Если вам необходимо чтобы ваше приложение работало без установленного сервера
+                    Firebird, т.е. в режиме Embedded, то для Firebird 2.5 необходимо заменить
+                        <filename>fbclient.dll</filename> на <filename>fbembed.dll</filename>.
+                    Убедитесь что битность библиотеки (64 или 32) соответсвует битности приложения.
+                    При желании имя библиотеки можно вынести в конфигурационный файл вашего
+                    приложения. Для </para>
+                <para>Firebird 3.0 ничего изменять не требуется (режим работы зависит от строки
+                    подключения и значения параметра <classname>Providers</classname> в файле
+                        <filename>firebird.conf</filename> или
+                    <filename>databases.conf</filename>).</para>
+
+                <tip>
+                    <para>Даже если ваше приложение будет работать с Firebird в режиме Embedded,
+                        разработку удобнее вести под полноценным сервером. Дело в том, что в режиме
+                        Embedded Firebird работает в одном адресном пространстве с вашим
+                        приложением, что может привести к нежелательным последствиям при
+                        возникновении ошибок в вашем приложении. Кроме того, до версии Firebird 2.5
+                        (и в Firebird 3.0 в умалчиваемой конфигурации) любое приложение,
+                        подключающееся к базе данных во встроенном режиме, должно иметь возможность
+                        получить эксклюзивный доступ к этой базе данных. Как только это соединение
+                        будет успешным, никакие другие встроенные соединения не будут возможны.
+                        Когда вы подключаетесь к своей базе данных в Delphi IDE, установленное
+                        соединение находится в адресном пространстве Delphi, что предотвращает
+                        успешную отладку приложения из IDE. </para>
+                    <para>Учитывайте, что Embedded версия Firebird 3.0 требует эксклюзивного
+                        доступа, если он сконфигурирован для работы в режиме Super
+                        (SuperServer).</para>
+                </tip>
+            </section>
         </section>
+        <!-- fbdg30-firedac-libpath -->
 
-        <section>
+        <section xml:id="fbdg30-firedac-connparams">
             <title>Параметры подключения</title>
 
             <para>Параметры подключения к базе данных содержатся в свойстве
@@ -92,13 +124,13 @@ FDPhysFBDriverLink.VendorLib := xAppPath + 'fbclient' + PathDelim + 'fbclient.dl
                 компоненте), то упомянутые свойства будут заполнены автоматически. Набор этих
                 свойств зависит от типа базы данных.</para>
             <para>
-                <table>
+                <table xml:id="fbdg30-firedac-tbl-connprops">
                     <?dbfo keep-together='auto'?>
                     <title>Основные свойства компонента TFDConnection</title>
 
                     <tgroup cols="2">
-                        <colspec colwidth="2*" align="left"/>
-                        <colspec colwidth="4*" align="left"/>
+                        <colspec colname="colProp" colwidth="2*" align="left"/>
+                        <colspec colname="colPurp" colwidth="5*" align="left"/>
                         <thead>
                             <row valign="middle">
                                 <entry align="center">Свойство</entry>
@@ -137,35 +169,73 @@ FDPhysFBDriverLink.VendorLib := xAppPath + 'fbclient' + PathDelim + 'fbclient.dl
                                                 <para>Local — локальный протокол;</para>
                                             </listitem>
                                             <listitem>
-                                                <para>NetBEUI — именованные каналы;</para>
+                                                <para>NetBEUI — именованные каналы, WNET;</para>
                                             </listitem>
                                             <listitem>
-                                                <para>SPX — локальный протокол (до Firebird 2.0, не
+                                                <para>SPX — протокол Novell IPX/SPX (не
                                                   поддерживается в современных версиях);</para>
                                             </listitem>
                                             <listitem>
-                                                <para>TCPIP – TCP/IP.</para>
+                                                <para>TCPIP — TCP/IP.</para>
                                             </listitem>
                                         </itemizedlist></para></entry>
                             </row>
-                            <row>
+                            <row valign="middle">
                                 <entry><varname>Server</varname></entry>
                                 <entry><para>Имя сервера или его IP адрес. Если сервер работает на
                                         нестандартном порту, то необходимо также указать порт через
                                         слэш, например localhost/3051.</para></entry>
                             </row>
-                            <row>
+                            <row valign="middle">
                                 <entry><varname>SQLDialect</varname></entry>
                                 <entry><para>Диалект. Должен совпадать с диалектом базы
                                         данных.</para></entry>
                             </row>
-                            <row>
+                            <row valign="middle">
                                 <entry><varname>RoleName</varname></entry>
                                 <entry><para>Имя роли.</para></entry>
                             </row>
-                            <row>
+                            <row valign="middle">
                                 <entry><varname>CharacterSet</varname></entry>
                                 <entry><para>Имя набора символов соединения.</para></entry>
+                            </row>
+                            <row valign="middle">
+                                <entry align="left" namest="colProp" nameend="colPurp">Дополнительные
+                                    свойства:</entry>
+                            </row>
+                            <row valign="middle">
+                                <entry><varname>Connected</varname></entry>
+                                <entry><para>Управление подсоединением к БД, или проверка состояния
+                                        соединения. Это свойство должно быть выставлено в
+                                            <literal>True</literal> для работы мастеров других
+                                        компонентов FireDac. Если ваше приложение должно запрашивать
+                                        данные для авторизации, то важно не забыть сбросить это
+                                        свойство в <literal>False</literal> перед компиляцией вашего
+                                        приложения.</para></entry>
+                            </row>
+                            <row valign="middle">
+                                <entry><varname>LoginPrompt</varname></entry>
+                                <entry><para>Запрашивать ли имя пользователя и пароль при попытке
+                                        соединения.</para></entry>
+                            </row>
+                            <row valign="middle">
+                                <entry><varname>Transaction</varname></entry>
+                                <entry><para>Компонент <classname>TFDTransaction</classname>,
+                                        который будет использоваться в качестве умолчательного для
+                                        выполнения различных запросов. Если это свойство не
+                                        назначено явно, <classname>TFDConnection</classname> создаст
+                                        себе экземпляр <classname>TFDTransaction</classname>
+                                        самостоятельно, его параметры можно указать в свойстве
+                                            <classname>TxOptions</classname>.</para></entry>
+                            </row>
+                            <row valign="middle">
+                                <entry><varname>UpdateTransaction</varname></entry>
+                                <entry><para>Компонент <classname>TFDTransaction</classname>,
+                                        который будет использоваться в качестве умолчательного для
+                                        одноимённых свойств компонентов
+                                            <classname>TFDQuery</classname>. Если это свойство не
+                                        назначено явно, будет использовано значение из свойства 
+                                    <classname>Transaction</classname> этого соединения.</para></entry>
                             </row>
                         </tbody>
                     </tgroup>
@@ -173,48 +243,16 @@ FDPhysFBDriverLink.VendorLib := xAppPath + 'fbclient' + PathDelim + 'fbclient.dl
             </para>
             <para>
                 <figure>
-                    <title>Параметры подключения</title>
+                    <title>Редактор свойств TFDConnection</title>
                     <mediaobject>
                         <imageobject>
                             <imagedata fileref="images/firedac-connection-editor.png" align="center"
                             />
                         </imageobject>
-                        <textobject>
-                            <phrase>Параметры подключения</phrase>
-                        </textobject>
                     </mediaobject>
                 </figure>
             </para>
-            <para>Дополнительные свойства: <itemizedlist>
-                    <listitem>
-                        <para><varname>Connected</varname> – управление подсоединением к БД, или
-                            проверка состояния соединения. Это свойство должно быть выставлено в
-                                <literal>True</literal> для работы мастеров других компонентов
-                            FireDac. Если ваше приложение должно запрашивать данные для авторизации,
-                            то важно не забыть сбросить это свойство в <literal>False</literal>
-                            перед компиляцией вашего приложения.</para>
-                    </listitem>
-                    <listitem>
-                        <para><varname>LoginPrompt</varname> – запрашивать ли имя пользователя и
-                            пароль при попытке соединения.</para>
-                    </listitem>
-                    <listitem>
-                        <para><varname>Transaction</varname> – компонент
-                                <classname>TFDTransaction</classname>, который будет использоваться
-                            в качестве умолчательного для выполнения различных запросов. Если это
-                            свойство не назначено явно, <classname>TFDConnection</classname> создаст
-                            себе экземпляр <classname>TFDTransaction</classname> самостоятельно, его
-                            параметры можно указать в свойстве <varname>TxOptions</varname>.</para>
-                    </listitem>
-                    <listitem>
-                        <para><varname>UpdateTransaction</varname> – компонент
-                                <classname>TFDTransaction</classname>, который будет использоваться
-                            в качестве умолчательного для одноимённых свойств компонентов
-                                <classname>TFDQuery</classname>. Если это свойство не назначено
-                            явно, будет использовано значение из свойства
-                                <varname>Transaction</varname>.</para>
-                    </listitem>
-                </itemizedlist></para>
+
             <para>Поскольку параметры подключения, за исключением имени пользователя и пароля,
                 обычно не изменяются в процессе эксплуатации приложения, мы будем считывать их из
                 файла конфигурации.
