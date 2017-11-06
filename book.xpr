@@ -136,7 +136,6 @@
         <file name="ddl.xml"/>
         <file name="dml.xml"/>
         <file name="fb-extensions.xml"/>
-        <file name="indexes.xml"/>
         <file name="intro.xml"/>
         <file name="procedures.xml"/>
         <file name="psql.xml"/>

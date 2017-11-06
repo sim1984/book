@@ -815,7 +815,7 @@ new ScriptBundle("~/bundles/jquery").Include("~/Scripts/jquery-{version}.js")
                     },
                     // размер и максимальная длина для поля ввода
                     editoptions: { size: 30, maxlength: 60 }, 
-                    // говорит о том что поле обязательное
+                    // говорит о том, что поле обязательное
                     editrules: { required: true } 
                 },
                 {
@@ -1522,7 +1522,7 @@ var dbGrid = $("#jqg").jqGrid({
                 newformat: 'd.m.Y H:i:s'
             },
             editoptions: {
-                // иницивлизация элемента формы для редактирования
+                // инициализация элемента формы для редактирования
                 dataInit: function (element) {
                     // создаём datepicker
                     $(element).datepicker({
@@ -1534,7 +1534,7 @@ var dbGrid = $("#jqg").jqGrid({
                 }
             },
             searchoptions: {
-                // иницивлизация элемента формы для поиска
+                // инициализация элемента формы для поиска
                 dataInit: function (element) {
                     // создаём datepicker
                     $(element).datepicker({
@@ -2024,7 +2024,7 @@ function showChildGrid(parentRowID, parentRowKey) {
                  edittype: 'custom',
                  editoptions: {
                      custom_element: function (value, options) {
-                         // создаём скрытый эелемент ввода
+                         // создаём скрытый элемент ввода
                          return $("<input>")
                               .attr('type', 'hidden')
                               .attr('rowid', options.rowId)
@@ -2855,7 +2855,7 @@ namespace FBMVCExample.Providers
         }
 
         /// <summary>
-        /// Создаение новой роли
+        /// Создание новой роли
         /// </summary>
         /// <param name="roleName">Имя роли</param>
         public override void CreateRole(string roleName)
@@ -3003,17 +3003,8 @@ public class InvoiceController : Controller
     <section>
         <title>Заключение</title>
 
-        <para><link xmlns:xlink="http://www.w3.org/1999/xlink"
-                xlink:href="http://www.ibase.ru/files/articles/firebird_examples/firebird_example_dot_NET_MVC_source.zip"
-                >Исходные коды примера приложения</link></para>
-        <para><link xmlns:xlink="http://www.w3.org/1999/xlink"
-                xlink:href="http://www.ibase.ru/files/articles/firebird_examples/firebird_example_database.zip"
-                >Готовая БД 2.5 и 3.0</link></para>
-        <para><link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="http://www.ibase.ru"
-                >www.ibase.ru</link>, <link xmlns:xlink="http://www.w3.org/1999/xlink"
-                xlink:href="http://www.ibsurgeon.com">www.ibsurgeon.com</link></para>
-        <para><link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="mailto:support@ibase.ru"
-                >support@ibase.ru</link>, <link xmlns:xlink="http://www.w3.org/1999/xlink"
-                xlink:href="mailto:support@ib-aid.com">support@ib-aid.com</link></para>
+        <para>Вы можете скачать исходные тексты по ссылке <link xmlns:xlink="http://www.w3.org/1999/xlink"
+            xlink:href="https://github.com/sim1984/FBMVCExample"
+            >https://github.com/sim1984/FBMVCExample</link></para>
     </section>
 </chapter>

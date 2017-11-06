@@ -647,9 +647,9 @@ static class AppVariables
     public static DateTime FinishDate { get; set; }
 
     /// <summary>
-    /// Возвращает экземпляр модели (контекста)
+    /// Returns an instance of the model (context)
     /// </summary>
-    /// <returns>Модель</returns>
+    /// <returns>Model</returns>
     public static DbModel CreateDbContext() {
         dbContext = dbContext ?? new DbModel();
         return dbContext;        
@@ -1689,7 +1689,7 @@ private void btnDiscount_Click(object sender, EventArgs e) {
 
     var dbContext = AppVariables.getDbContext();
     var connection = dbContext.Database.Connection;
-    // явный старт транзакции по умолчанию
+    // явный старт транзакции
     using (var dbTransaction = connection.BeginTransaction(IsolationLevel.Snapshot)) {
         dbContext.Database.UseTransaction(dbTransaction);
         string sql =
@@ -1700,10 +1700,10 @@ private void btnDiscount_Click(object sender, EventArgs e) {
             // создаём параметры запроса
             var idParam = new FbParameter("PRODUCT_ID", FbDbType.Integer);
             var discountParam = new FbParameter("DISCOUNT", FbDbType.Decimal);
-            // создаём SQL комманду для обновления записей
+            // создаём SQL команду для обновления записей
             var sqlCommand = connection.CreateCommand();
             sqlCommand.CommandText = sql;
-            // указываем команде какую транзакцию использовать
+            // указываем команде, какую транзакцию использовать
             sqlCommand.Transaction = dbTransaction;
             sqlCommand.Parameters.Add(discountParam);
             sqlCommand.Parameters.Add(idParam);
@@ -1761,18 +1761,10 @@ private void btnDiscount_Click(object sender, EventArgs e) {
     <section>
         <title>Заключение</title>
 
-        <para><link xmlns:xlink="http://www.w3.org/1999/xlink"
-                xlink:href="http://www.ibase.ru/files/articles/firebird_examples/firebird_example_dot_NET_source.zip"
-                >Исходные коды примера приложения</link></para>
-        <para><link xmlns:xlink="http://www.w3.org/1999/xlink"
-                xlink:href="http://www.ibase.ru/files/articles/firebird_examples/firebird_example_database.zip"
-                >Готовая БД 2.5 и 3.0</link></para>
-        <para><link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="http://www.ibase.ru"
-                >www.ibase.ru</link>, <link xmlns:xlink="http://www.w3.org/1999/xlink"
-                xlink:href="http://www.ibsurgeon.com">www.ibsurgeon.com</link></para>
-        <para><link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="mailto:support@ibase.ru"
-                >support@ibase.ru</link>, <link xmlns:xlink="http://www.w3.org/1999/xlink"
-                xlink:href="mailto:support@ib-aid.com">support@ib-aid.com</link></para>
+        <para>Исходные коды примера приложения вы можете скачать по ссылке <link
+                xmlns:xlink="http://www.w3.org/1999/xlink"
+                xlink:href="https://github.com/sim1984/FBFormAppExample"
+                >https://github.com/sim1984/FBFormAppExample</link>.</para>
     </section>
 
 </chapter>

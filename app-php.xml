@@ -260,11 +260,10 @@ $trh = ibase_trans($dbh, IBASE_WRITE | IBASE_CONCURRENCY | IBASE_WAIT);
 try {
   // Выполняем запрос
   foreach ($users as $user)) {
-    ibase_execute($sth, $user[0], $user[1]);
+    $r = ibase_execute($sth, $user[0], $user[1]);
     // Если произошла ошибка, бросаем исключение
-    $err_msg = ibase_errmsg();
-    if ($err_msg)
-      throw new \Exception($err_msg);
+    if ($r === false)
+      throw new \Exception(ibase_errmsg());
   }
   ibase_commit($trh);
 }
@@ -370,7 +369,8 @@ $username = 'SYSDBA';
 $password = 'masterkey';
 try {
   // Подключение к БД
-  $dbh = new \PDO($dsn, $username, $password, [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION]);
+  $dbh = new \PDO($dsn, $username, $password, 
+                  [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION]);
   $sql = 'SELECT login, email FROM users';
   // Выполняем запрос
   $query = $dbh->query($sql);
@@ -440,7 +440,8 @@ $username = 'SYSDBA';
 $password = 'masterkey';
 try {
   // Подключение к БД
-  $dbh = new \PDO($dsn, $username, $password, [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION]);
+  $dbh = new \PDO($dsn, $username, $password, 
+                  [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION]);
   $sql = 'INSERT INTO users(login, email) VALUES(?, ?)';
   $users = [
     ["user1", "user1@gmail.com"], 
@@ -1492,7 +1493,7 @@ class CustomerController extends Controller
     public function showCustomers() 
     {
         // запрашиваем из модели первые 20 заказчиков 
-	 // отсортированных по алфавиту 
+        // отсортированных по алфавиту 
         $customers = Customer::select()
                    ->orderBy('NAME')
                    ->take(20)
@@ -1815,7 +1816,7 @@ class ProductController extends Controller {
         });         
         // Добавляем кнопки для просмотра, редактирования и удаления записи
         $grid->edit('/product/edit', 'Редактирование', 'show|modify|delete'); 
-        // Добавляем кнопку добавления заказчика
+        // Добавляем кнопку добавления товара
         $grid->link('/product/edit', "Добавление товара", "TR");
         // задаём сортировку
         $grid->orderBy('NAME', 'asc');
@@ -1852,7 +1853,7 @@ class ProductController extends Controller {
                 break;
         }
         // задаём что после операций добавления, редактирования и удаления 
-        // возвращаемся к списку заказчиков 
+        // возвращаемся к списку товаров 
         $edit->back('insert|update|do_delete', 'products');
         // Добавляем редакторы определённого типа, задаём им подпись 
         // и связываем их с атрибутами модели

@@ -36,7 +36,7 @@
 
             <para>Мы будем размещать необходимую библиотеку доступа в папке
                     <filename>fbclient</filename>, которая расположена в папке приложения. Для этого
-                в коде на событие OnCreate дата модуля пропишем следующий код.
+                в коде на событие <function>OnCreate</function> дата модуля пропишем следующий код.
                 <programlisting language="delphi"> 
 // указываем путь до клиентской библиотеки
 xAppPath := ExtractFileDir(Application.ExeName) + PathDelim;
@@ -85,12 +85,12 @@ FDPhysFBDriverLink.VendorLib := xAppPath + 'fbclient' + PathDelim + 'fbclient.dl
         <section>
             <title>Параметры подключения</title>
 
-            <para>Компонент <classname>TFDConnection</classname> параметры подключения к базе данных
-                содержатся в свойстве <varname>Params</varname> (имя пользователя, пароль, набор
-                символов соединения и др.). Если воспользоваться редактором свойств
-                    <classname>TFDConnection</classname> (двойной клик на компоненте), то упомянутые
-                свойства будут заполнены автоматически. Набор этих свойств зависит от типа базы
-                данных.</para>
+            <para>Параметры подключения к базе данных содержатся в свойстве
+                    <varname>Params</varname> (имя пользователя, пароль, набор символов соединения и
+                др.) компонента <classname>TFDConnection</classname>. Если воспользоваться
+                редактором свойств <classname>TFDConnection</classname> (двойной клик на
+                компоненте), то упомянутые свойства будут заполнены автоматически. Набор этих
+                свойств зависит от типа базы данных.</para>
             <para>
                 <table>
                     <?dbfo keep-together='auto'?>
@@ -201,11 +201,10 @@ FDPhysFBDriverLink.VendorLib := xAppPath + 'fbclient' + PathDelim + 'fbclient.dl
                     <listitem>
                         <para><varname>Transaction</varname> – компонент
                                 <classname>TFDTransaction</classname>, который будет использоваться
-                            в качестве умолчательного для выполнения различных операций
-                                <classname>TFDConnection</classname>. Если это свойство не назначено
-                            явно, <classname>TFDConnection</classname> создаст себе экземпляр
-                                <classname>TFDTransaction</classname> самостоятельно, его параметры
-                            можно указать в свойстве <varname>TxOptions</varname>.</para>
+                            в качестве умолчательного для выполнения различных запросов. Если это
+                            свойство не назначено явно, <classname>TFDConnection</classname> создаст
+                            себе экземпляр <classname>TFDTransaction</classname> самостоятельно, его
+                            параметры можно указать в свойстве <varname>TxOptions</varname>.</para>
                     </listitem>
                     <listitem>
                         <para><varname>UpdateTransaction</varname> – компонент
@@ -492,52 +491,12 @@ if not FDConnection.Connected then
         </para>
         <para>В отличие от других СУБД в Firebird и Interbase разрешено использовать сколько угодно
             компонентов <classname>TFDTransaction</classname> привязанных к одному соединению. В
-            нашем приложении мы будем использовать одну общую читающую транзакцию для всех
-            справочников и оперативных журналов, и по одной пишущей транзакции на каждый
-            справочник/журнал.</para>
-        <para>В нашем приложении мы не будем полагаться на автоматический старт и завершение
-            транзакций, а потому во всех транзакциях <code language="delphi">Options.AutoCommit =
-                False</code>, <code language="delphi">Options.AutoStart = False</code> и <code
-                language="delphi">Options.AutoStop = False</code>.</para>
-        <para>Поскольку читающая транзакция общая для всех справочников и журналов, то удобно
-            разместить её в главном дата модуле. Для обычной работы (показ данных в гриде и т.п.)
-            обычно используются режим изолированости READ COMMITED (<code language="delphi"
-                >Options.Isolation = xiReadCommited</code>), т.к. он позволяет транзакции видеть
-            чужие, committed изменения базы данных просто путём повторного выполнения запросов
-            (перечитывания данных). Поскольку эта транзакция используется только для чтения,
-            установим свойство <varname>Options.ReadOnly</varname> в значение
-                <literal>True</literal>. Таким образом, наша транзакция будет иметь параметры
-                <code>read read_commited rec_version</code>. Транзакция с такими параметрами в
-            Firebird может быть открытой сколь угодно долгое время (дни, недели, месяцы), без
-            блокирования других транзакций или влияния на накопление мусора в базе данных (потому
-            что на самом деле, на сервере такая транзакция стартует как committed).</para>
-        <note>
-            <para>Такую транзакцию нельзя использовать для отчётов (особенно если они используют
-                несколько последовательных запросов), потому что транзакция с режимом
-                изолированности READ COMMITED во время перечитывания данных будет видеть все новые
-                committed-изменения.</para>
-            <para>Для отчётов рекомендуется использовать короткую транзакцию только для чтения с
-                режимом изолированности SNAPSHOT (<code>Options.Isolation = xiSnapshot</code> и
-                    <code language="delphi">Options.ReadOnly= True</code>). В данном примере работа
-                с отчётами не рассматривается.</para>
-        </note>
-        <para>Стартуем читающую транзакцию сразу после успешной установки соединения с базой данных,
-            вызвав <methodname>trRead.StartTransaction</methodname> в событии
-                <varname>OnCreate</varname> главного датамодуля, и завершаем перед закрытием
-            соединения, вызвав <methodname>tRead.Commit</methodname> в событии
-                <varname>OnDestroy</varname> главного датамодуля. Значение свойства
-                <varname>Options.DisconnectAction</varname> равное <constant>xdCommit</constant> по
-            умолчанию, подходит для транзакции только для чтения.</para>
-        <para>Пишущая транзакция будет отдельной для каждого справочника/журнала. Её мы разместим на
-            форме, которая относится непосредственно к нужному журналу. Пишущая транзакция должна
-            быть максимально короткой для того, чтобы не удерживать Oldest Active Transaction,
-            которая не даёт собрать мусор, что в свою очередь приводит к деградации
-            производительности. Поскольку пишущая транзакция очень короткая мы можем использовать
-            уровень изолированности SNAPSHOT. Таким образом, наша пишущая транзакция будет иметь
-            параметры <code language="delphi">Options.ReadOnly=False</code> и <code
-                language="delphi">Options.Isolation = xiSnapshot</code>. Для пишущих транзакций
-            значение свойства <varname>Options.DisconnectAction</varname> по умолчанию не подходит,
-            его необходимо выставить в значение <constant>xdRollback</constant>.</para>
+            нашем приложении мы будем использовать по одной читающей и одной пишущей транзакции на
+            каждый справочник/журнал.</para>
+        <para>Мы не будем полагаться на автоматический старт и завершение транзакций, а потому во
+            всех транзакциях установим свойства следующим образом <code language="delphi"
+                >Options.AutoCommit = False</code>, <code language="delphi">Options.AutoStart =
+                False</code> и <code language="delphi">Options.AutoStop = False</code>.</para>
     </section>
     <section>
         <title>Датасеты</title>
@@ -1098,13 +1057,26 @@ where pkfield = :old_ pkfield
 
         <para>В нашем приложении мы создадим два справочника: справочник товаров и справочник
             заказчиков. Каждый из справочников представляет собой форму с сеткой
-                <classname>TDBGrid</classname>, источником данных
-            <classname>TDataSource</classname>, набором данных <classname>TFDQuery</classname>,
-            пишущей транзакции <classname>TFDTransaction</classname>.</para>
+                <classname>TDBGrid</classname> и инструментальной панелью с кнопками. Бизнес-логика
+            работы со справочником будет находится в отдельном DataModule, который содержит источник
+            данных <classname>TDataSource</classname>, набором данных
+                <classname>TFDQuery</classname>,читающую и пишущую транзакции
+                <classname>TFDTransaction</classname>.</para>
 
         <para>Рассмотрим создание справочников на примере справочника заказчиков.</para>
 
         <para>
+            <figure>
+                <title>Модуль dCustomers</title>
+                <mediaobject>
+                    <imageobject>
+                        <imagedata fileref="images/firedac-dcustomer.png" width="680"/>
+                    </imageobject>
+                    <textobject>
+                        <phrase>Модуль dCustomers.</phrase>
+                    </textobject>
+                </mediaobject>
+            </figure>
             <figure>
                 <title>Форма справочника Customers</title>
                 <mediaobject>
@@ -1119,18 +1091,18 @@ where pkfield = :old_ pkfield
         </para>
 
         <note>
-            <para>Компонент <varname>trRead</varname> не виден, потому что находится не на форме, а
-                в модуле <varname>dmMain</varname>.</para>
+            <para>Компонент <varname>DataSource</varname> не виден, потому что находится не на
+                форме, а в модуле <varname>dCustomers</varname>.</para>
         </note>
 
-        <para>Разместим компонент <classname>TFDQuery</classname> на форме с именем
+        <para>Разместим компонент <classname>TFDQuery</classname> в модуле dCustomres с именем
                 <varname>qryCustomers</varname>. Этот набор данных будет указан в свойстве
                 <varname>DataSet</varname> источника данных <varname>DataSource</varname>. В
             свойстве <varname>Transaction</varname> укажем ReadOnly транзакцию
-                <varname>trRead</varname>, которая была создана в главном датамодуле проекта. В
-            свойстве <varname>UpdateTransaction</varname> указываем транзакцию
-                <varname>trWrite</varname>, в свойстве <varname>Connection</varname> — соединение
-            расположенное в главном датамодуле. В свойстве SQL напишем следующий запрос:
+                <varname>trRead</varname>, а в свойстве <varname>UpdateTransaction</varname>
+            указываем транзакцию <varname>trWrite</varname>, в свойстве
+                <varname>Connection</varname> — соединение расположенное в главном датамодуле. В
+            свойстве SQL напишем следующий запрос:
             <programlisting language="sql"> 
 SELECT
     customer_id,
@@ -1144,10 +1116,53 @@ ORDER BY name
                 </programlisting>
         </para>
 
-        <para>Пишущая транзакция <varname>trWrite</varname> должна быть максимально короткой, и
-            иметь режим изолированности SNAPSHOT. Мы не будем полагаться на автоматический старт и
-            завершение транзакции, а будем стартовать и завершать транзакцию явно. Таким образом,
-            наша транзакция должна иметь следующие свойства:
+        <para>Читающая транзакция <varname>trRead</varname> запускается при отображении формы
+            справочника (событие OnActivate), а завершается при закрытии формы. Для отображения
+            данных в гридах обычно используются режим изолированности READ COMMITED (<code
+                language="delphi">Options.Isolation = xiReadCommited</code>), т.к. он позволяет
+            транзакции видеть чужие, committed изменения базы данных просто путём повторного
+            выполнения запросов (перечитывания данных) без рестарта транзакции. Поскольку эта
+            транзакция используется только для чтения, установим свойство
+                <varname>Options.ReadOnly</varname> в значение <literal>True</literal>. Таким
+            образом, наша транзакция будет иметь параметры <code>read read_commited
+                rec_version</code>. Транзакция с такими параметрами в Firebird может быть открытой
+            сколь угодно долгое время (дни, недели, месяцы), без блокирования других транзакций или
+            влияния на накопление мусора в базе данных (потому что на самом деле, на сервере такая
+            транзакция стартует как committed). Значение свойства
+                <varname>Options.DisconnectAction</varname> установим <constant>xdCommit</constant>,
+            которое хорошо подходит для транзакции только для чтения. Таким образом у читающей
+            транзакции будут следующие свойства:
+            <programlisting> 
+Options.AutoStart = False
+Options.AutoCommit = False
+Options.AutoStop = False
+Options.DisconnectAction = xdCommit
+Options.Isolations = xiReadCommited
+Options.ReadOnly = True
+                </programlisting>
+        </para>
+
+        <note>
+            <para>Такую транзакцию нельзя использовать для отчётов (особенно если они используют
+                несколько последовательных запросов), потому что транзакция с режимом
+                изолированности READ COMMITED во время перечитывания данных будет видеть все новые
+                committed-изменения.</para>
+            <para>Для отчётов рекомендуется использовать короткую транзакцию только для чтения с
+                режимом изолированности SNAPSHOT (<code>Options.Isolation = xiSnapshot</code> и
+                    <code language="delphi">Options.ReadOnly= True</code>). В данном примере работа
+                с отчётами не рассматривается.</para>
+        </note>
+        <para>Пишущая транзакция <varname>trWrite</varname> должна быть максимально короткой для
+            того, чтобы не удерживать Oldest Active Transaction, которая не даёт собрать мусор, что
+            в свою очередь приводит к деградации производительности. Поскольку пишущая транзакция
+            очень короткая мы можем использовать уровень изолированности SNAPSHOT. Таким образом,
+            наша пишущая транзакция будет иметь параметры <code language="delphi"
+                >Options.ReadOnly=False</code> и <code language="delphi">Options.Isolation =
+                xiSnapshot</code>. Для пишущих транзакций значение свойства
+                <varname>Options.DisconnectAction</varname> по умолчанию не подходит, его необходимо
+            выставить в значение <constant>xdRollback</constant>. Мы не будем полагаться на
+            автоматический старт и завершение транзакции, а будем стартовать и завершать транзакцию
+            явно. Таким образом, наша транзакция должна иметь следующие свойства:
             <programlisting> 
 Options.AutoStart = False
 Options.AutoCommit = False
@@ -1273,71 +1288,114 @@ WHERE customer_id = :old_customer_id
             <programlisting language="delphi"> 
 procedure TCustomerForm.actEditRecordExecute(Sender: TObject);
 var
-  xEditor: TEditCustomerForm;
+  xEditorForm: TEditCustomerForm;
 begin
-  xEditor := TEditCustomerForm.Create(Self);
+  xEditorForm := TEditCustomerForm.Create(Self);
   try
-    xEditor.OnClose := CustomerEditorClose;
-    xEditor.CustomerForm := Self;
-    xEditor.Caption := 'Edit customer';
-    qryCustomer.CachedUpdates := True;
-    qryCustomer.Edit;
-    xEditor.ShowModal;
+    xEditorForm.OnClose := CustomerEditorClose;
+    xEditorForm.DataSource := Customers.DataSource;
+    xEditorForm.Caption := 'Edit customer';
+    Customers.Edit;
+    xEditorForm.ShowModal;
   finally
-    xEditor.Free;
+    xEditorForm.Free;
   end;
 end;
                 </programlisting>
         </para>
-        <para>По коду видно, что перед переводом набора данных в режим редактирования мы
-            устанавливаем ему режим <varname>CachedUpdates</varname>, а вся логика обработки
-            редактирования происходит в модальной форме.
+        <para>Свойство <varname>Customers</varname> инициализируется в событии
+                <function>OnCreate</function>:
             <programlisting language="delphi"> 
-procedure TCustomerForm.CustomerEditorClose (Sender: TObject;
+procedure TCustomerForm.FormCreate(Sender: TObject);
+begin
+  FCustomers := TDMCustomers.Create(Self);
+  DBGrid.DataSource := Customers.DataSource;
+end;
+                </programlisting>
+        </para>
+        <para>В методе Edit модуля dCustomers перед переводом набора данных в режим редактирования
+            мы устанавливаем ему режим <varname>CachedUpdates</varname>:
+            <programlisting language="delphi"> 
+procedure TdmCustomers.Edit;
+begin
+  qryCustomer.CachedUpdates := True;
+  qryCustomer.Edit;
+end;
+                </programlisting>
+        </para>
+        <para>Логика обработки редактирования и добавления записи производится в обработчике события
+                <varname>OnClose</varname> для модальной формы редактирования: <programlisting language="delphi"> 
+<![CDATA[
+procedure TCustomerForm.CustomerEditorClose(Sender: TObject;
   var Action: TCloseAction);
 begin
-  if TForm(Sender).ModalResult &lt;&gt; mrOK then
+  if TEditCustomerForm(Sender).ModalResult <> mrOK then
   begin
-    // отменяем все изменения
-    qryCustomer.Cancel;
-    qryCustomer.CancelUpdates;
-    // возвращаем набор данных в обычный режим обновления
-    qryCustomer.CachedUpdates := False;
-    // и позволяем закрыть форму
+    Customers.Cancel;
     Action := caFree;
     Exit;
   end;
 
   try
-    // подтверждаем изменения на уровне набора данных
-    qryCustomer.Post;
-    // стартуем транзакцию
-    trWrite.StartTransaction;
-    // если в наборе данных есть изменения
-    if (qryCustomer.ApplyUpdates = 0) then
-    begin
-      // записываем их в БД
-      qryCustomer.CommitUpdates;
-      // и подтверждаем транзакцию
-      trWrite.Commit;
-    end
-    else begin
-      raise Exception.Create(qryCustomer.RowError.Message);
-    end;
-    qryCustomer.CachedUpdates := False;
+    Customers.Post;
+    Customers.Save;
+
     Action := caFree;
   except
     on E: Exception do
     begin
-      // откатываем транзакцию
-      if trWrite.Active then
-        trWrite.Rollback;
       Application.ShowException(E);
-      // Не закрываем окно, даём возможность исправить ошибку
+      // It does not close the window give the user correct the error
       Action := caNone;
     end;
   end;
 end;
+]]>
+                </programlisting>
+        </para>
+        <para>Кроме того для понимания внутрениих процессов потребуется привести коды методов
+                <methodname>Cancel</methodname>, <methodname>Post</methodname> и
+                <methodname>Save</methodname> модуля данных dCustomer. <programlisting language="delphi"> 
+<![CDATA[
+procedure TdmCustomers.Cancel;
+begin
+  qryCustomer.Cancel;
+  qryCustomer.CancelUpdates;
+  qryCustomer.CachedUpdates := False;
+end;
+
+procedure TdmCustomers.Post;
+begin
+  qryCustomer.Post;
+end;
+
+procedure TdmCustomers.Save;
+begin
+  // We do everything in a short transaction
+  // In CachedUpdates mode error does not stop running.
+  // ApplyUpdates method returns the number of errors.
+  // The error can be obtained from the property RowError
+  try
+
+    trWrite.StartTransaction;
+    if (qryCustomer.ApplyUpdates = 0) then
+    begin
+      qryCustomer.CommitUpdates;
+      trWrite.Commit;
+    end
+    else
+      raise Exception.Create(qryCustomer.RowError.Message);
+    qryCustomer.CachedUpdates := False;
+  except
+    on E: Exception do
+    begin
+      if trWrite.Active then
+        trWrite.Rollback;
+      raise;
+    end;
+  end;
+end;
+]]>
                 </programlisting>
         </para>
         <para>Из кода видно, что до тех пор, пока кнопка OK не нажата, пишущая транзакция не
@@ -1394,10 +1452,11 @@ RETURNING PRODUCT_ID
                 <varname>qryInvoiceLine</varname>.</para>
 
         <para>В свойстве <varname>Transaction</varname> обоих наборов данных укажем ReadOnly
-            транзакцию <varname>trRead</varname>, которая была создана в главном датамодуле проекта.
-            В свойстве <varname>UpdateTransaction</varname> указываем транзакцию
-                <varname>trWrite</varname>, в свойстве <varname>Connection</varname> — соединение,
-            расположенное в главном датамодуле.</para>
+            транзакцию <varname>trRead</varname>, которая находится в модуле данных
+                <varname>dmInvoice</varname>. В свойстве <varname>UpdateTransaction</varname>
+            указываем транзакцию <varname>trWrite</varname>, в свойстве
+                <varname>Connection</varname> — соединение, расположенное в главном
+            датамодуле.</para>
 
         <para>Большинство журналов содержат поле с датой создания документа. Чтобы уменьшить
             количество выбираемых данных обычно принято вводить такое понятие как рабочий период для
@@ -1419,6 +1478,17 @@ RETURNING PRODUCT_ID
                     </imageobject>
                     <textobject>
                         <phrase>Форма журнала Invoices.</phrase>
+                    </textobject>
+                </mediaobject>
+            </figure>
+            <figure>
+                <title>Модуль данных dInvoices</title>
+                <mediaobject>
+                    <imageobject>
+                        <imagedata fileref="images/firedac-dinvoice.png" width="680"/>
+                    </imageobject>
+                    <textobject>
+                        <phrase>Модуль данных dInvoices.</phrase>
                     </textobject>
                 </mediaobject>
             </figure>
@@ -1529,37 +1599,46 @@ EXECUTE PROCEDURE sp_pay_for_inovice(:invoice_id)
                 <methodname>qryInvoice.Refresh</methodname> для обновления данных в гриде.</para>
 
         <para>Вызов хранимых процедур, для которых не требуется ввод данных, производится следующим
-            образом:
-            <programlisting language="delphi"> 
-if MessageDlg('Вы действительно хотите удалить счёт фактуру?', mtConfirmation,
-  [mbYes, mbNo], 0) = mrYes then
+            образом: <programlisting language="delphi"> 
+<![CDATA[
+procedure TdmInvoice.DeleteInvoice;
 begin
-  // Стартуем транзакцию
+  // We do everything in a short transaction
   trWrite.StartTransaction;
   try
     qryDeleteInvoice.ParamByName('INVOICE_ID').AsInteger :=
-      qryInvoice.FieldByName('INVOICE_ID').AsInteger;
-    // выполнение хранимой процедуры
+      Invoice.INVOICE_ID.Value;
     qryDeleteInvoice.Execute;
-    // подтверждение транзакции
     trWrite.Commit;
-    // обновление данных в гриде
     qryInvoice.Refresh;
   except
-    on E: EFDDBEngineException do
+    on E: Exception do
     begin
       if trWrite.Active then
         trWrite.Rollback;
-      Application.ShowException(E);
+      raise;
     end;
   end;
 end;
+]]>
+                </programlisting> Перед выполнением некоторых операций необходимо переспросить
+            об этом пользователя, например при удалении счёт-фактуры: <programlisting language="delphi"> 
+<![CDATA[
+procedure TInvoiceForm.actDeleteInvoiceExecute(Sender: TObject);
+begin
+  if MessageDlg('Are you sure you want to delete an invoice?', mtConfirmation,
+    [mbYes, mbNo], 0) = mrYes then
+  begin
+    Invoices.DeleteInvoice;
+  end;
+end;
+]]>
                 </programlisting>
         </para>
 
         <para>Для добавления новой записи и редактирования существующей, как и в случае со
             справочниками мы будем использовать модальные формы. В данном случае мы не будем
-            использовать DBAware компоненты. Ещё одна особенность - для выбора заказчика мы будем
+            использовать DBAware компоненты. Ещё одна особенность — для выбора заказчика мы будем
             использовать компонент <classname>TButtonedEdit</classname>. Он будет отображать
             наименование текущего заказчика, а по нажатию кнопки вызывать модальную форму с гридом
             для выбора заказчика. Конечно, можно было бы воспользоваться чем-то вроде
@@ -1594,9 +1673,8 @@ begin
     xSelectForm.Visible := False;
     if xSelectForm.ShowModal = mrOK then
     begin
-      FCustomerId := xSelectForm.qryCustomer.FieldByName('CUSTOMER_ID')
-        .AsInteger;
-      edtCustomer.Text := xSelectForm.qryCustomer.FieldByName('NAME').AsString;
+      FCustomerId := xSelectForm.Customers.Customer.CUSTOMER_ID.Value;
+      edtCustomer.Text := xSelectForm.Customers.Customer.NAME.Value;
     end;
   finally
     xSelectForm.Free;
@@ -1609,22 +1687,22 @@ end;
             <programlisting language="delphi"> 
 procedure TInvoiceForm.actEditInvoiceExecute(Sender: TObject);
 var
-  xEditor: TEditInvoiceForm;
+  xEditorForm: TEditInvoiceForm;
 begin
-  xEditor := TEditInvoiceForm.Create(Self);
+  xEditorForm := TEditInvoiceForm.Create(Self);
   try
-    xEditor.InvoiceForm := Self;
-    xEditor.EditMode := emInvoiceEdit;
-    xEditor.Caption := 'Редактирование счёт-фактуры';
+    xEditorForm.OnClose := EditInvoiceEditorClose;
+    xEditorForm.Caption := 'Edit invoice';
 
-    xEditor.InvoiceId := qryInvoice.FieldByName('INVOICE_ID').AsInteger;
-    xEditor.SetCustomer(qryInvoice.FieldByName('CUSTOMER_ID').AsInteger,
-                        qryInvoice.FieldByName('CUSTOMER_NAME').AsString);
-    xEditor.InvoiceDate := qryInvoice.FieldByName('INVOICE_DATE').AsDateTime;
+    xEditorForm.InvoiceId := Invoices.Invoice.INVOICE_ID.Value;
+    xEditorForm.SetCustomer(
+      Invoices.Invoice.CUSTOMER_ID.Value,
+      Invoices.Invoice.CUSTOMER_NAME.Value);
+    xEditorForm.InvoiceDate := Invoices.Invoice.INVOICE_DATE.AsDateTime;
 
-    xEditor.ShowModal;
+    xEditorForm.ShowModal;
   finally
-    xEditor.Free;
+    xEditorForm.Free;
   end;
 end;
 
@@ -1638,69 +1716,82 @@ end;
         </para>
         <para>Обработку добавления новой счёт-фактуры и редактирование существующей будем
             осуществлять в событии закрытия модальной формы, также, как это сделано для
-            справочников. Однако здесь мы уже не будем переводить набор данных в режим
+            справочников. Бизнес логика добавления новой счёт-фактуры находится в модуле данных
+            dmInvoices. Однако здесь мы уже не будем переводить набор данных в режим
                 <varname>CachedUpdates</varname>, поскольку модификация производится с помощью
             хранимых процедур, и мы не используем DBAware компоненты. </para>
         <para>
             <programlisting language="delphi"> 
-procedure TEditInvoiceForm.FormClose(Sender: TObject; var Action: TCloseAction);
+<![CDATA[      
+procedure TInvoiceForm.actAddInvoiceExecute(Sender: TObject);
 var
-  xCustomerId: Integer;
+  xEditorForm: TEditInvoiceForm;
 begin
-  // если форма закрыта не по нажатию кнопки OK, 
-  // то вообще ничего не делаем. Транзакция не стартует.
-  if ModalResult &lt;&gt; mrOK then
+  xEditorForm := TEditInvoiceForm.Create(Self);
+  try
+    xEditorForm.Caption := 'Add invoice';
+    xEditorForm.OnClose := AddInvoiceEditorClose;
+
+    xEditorForm.InvoiceDate := Now;
+
+    xEditorForm.ShowModal;
+  finally
+    xEditorForm.Free;
+  end;
+end;
+
+procedure TInvoiceForm.AddInvoiceEditorClose(Sender: TObject;
+  var Action: TCloseAction);
+var
+  xEditorForm: TEditInvoiceForm;
+begin
+  xEditorForm := TEditInvoiceForm(Sender);
+
+  if xEditorForm.ModalResult <> mrOK then
   begin
     Action := caFree;
     Exit;
   end;
 
-  // Выполняем всё в короткой транзакции
-  FInvoiceForm.trWrite.StartTransaction;
   try
-    if FEditMode = emInvoiceAdd then
-    begin
-      // если FcustomerId = 0, то прамаетру CUSTOMER_ID выставляем значение NULL 
-      if FCustomerId &lt;&gt; 0 then
-        FInvoiceForm.qryAddInvoice.ParamByName('CUSTOMER_ID').AsInteger :=
-          FCustomerId
-      else
-        FInvoiceForm.qryAddInvoice.ParamByName('CUSTOMER_ID').Clear;
-
-      FInvoiceForm.qryAddInvoice.ParamByName('INVOICE_DATE').AsSQLTimeStamp :=
-        DateTimeToSQLTimeStamp(FInvoiceDate);
-      // выполяем хранимую процедуру для вставки записи
-      FInvoiceForm.qryAddInvoice.Execute();
-    end;
-    if FEditMode = emInvoiceEdit then
-    begin
-      FInvoiceForm.qryEditInvoice.ParamByName('INVOICE_ID').AsInteger :=
-        FInvoiceId;
-      FInvoiceForm.qryEditInvoice.ParamByName('CUSTOMER_ID').AsInteger :=
-        FCustomerId;
-      FInvoiceForm.qryEditInvoice.ParamByName('INVOICE_DATE').AsSQLTimeStamp :=
-        DateTimeToSQLTimeStamp(FInvoiceDate);
-      // выполняем хранимую процедуру для редактирования записи
-      FInvoiceForm.qryEditInvoice.Execute();
-    end;
-    // подтверждение транзакции
-    FInvoiceForm.trWrite.Commit;
-    // обновление данных в гриде
-    FInvoiceForm.qryInvoice.Refresh;
+    Invoices.AddInvoice(xEditorForm.CustomerId, xEditorForm.InvoiceDate);
 
     Action := caFree;
   except
     on E: Exception do
     begin
-      if FInvoiceForm.trWrite.Active then
-        FInvoiceForm.trWrite.Rollback;
       Application.ShowException(E);
-      // Не закрываем модальное окно. Даём пользователю возможность
-      // исправить ошибку
+      // It does not close the window give the user correct the error
       Action := caNone;
     end;
   end;
 end;
+
+procedure TdmInvoice.AddInvoice(ACustomerId: Integer; AInvoiceDate: TDateTime);
+begin
+  // We do everything in a short transaction
+  trWrite.StartTransaction;
+  try
+    qryAddInvoice.ParamByName('CUSTOMER_ID').AsInteger := ACustomerId;
+    qryAddInvoice.ParamByName('INVOICE_DATE').AsSqlTimeStamp :=
+      DateTimeToSQLTimeStamp(AInvoiceDate);
+
+    qryAddInvoice.Execute();
+
+    trWrite.Commit;
+    qryInvoice.Refresh;
+  except
+    on E: Exception do
+    begin
+      if trWrite.Active then
+        trWrite.Rollback;
+
+      raise;
+    end;
+  end;
+end;
+
+]]>
                 </programlisting>
         </para>
 
@@ -1771,8 +1862,6 @@ procedure TEditInvoiceLineForm.edtProductRightButtonClick(Sender: TObject);
 var
   xSelectForm: TGoodsForm;
 begin
-  // не позволяем изменять товар в режиме редактирования
-  // это можно сделать только при добавлении новой позиции
   if FEditMode = emInvoiceLineEdit then
     Exit;
 
@@ -1781,11 +1870,9 @@ begin
     xSelectForm.Visible := False;
     if xSelectForm.ShowModal = mrOK then
     begin
-      FProductId := xSelectForm.qryGoods.FieldByName('PRODUCT_ID')
-        .AsInteger;
-      edtProduct.Text := xSelectForm.qryGoods.FieldByName('NAME').AsString;
-      // в данном случае мы копируем также цену по прайсу
-      edtPrice.Text := xSelectForm.qryGoods.FieldByName('PRICE').AsString;
+      FProductId := xSelectForm.Goods.Product.PRODUCT_ID.Value;
+      edtProduct.Text := xSelectForm.Goods.Product.NAME.Value;
+      edtPrice.Text := xSelectForm.Goods.Product.PRICE.AsString;
     end;
   finally
     xSelectForm.Free;
@@ -1799,23 +1886,24 @@ end;
             <programlisting language="delphi"> 
 procedure TInvoiceForm.actEditInvoiceLineExecute(Sender: TObject);
 var
-  xEditor: TEditInvoiceLineForm;
+  xEditorForm: TEditInvoiceLineForm;
 begin
-  xEditor := TEditInvoiceLineForm.Create(Self);
+  xEditorForm := TEditInvoiceLineForm.Create(Self);
   try
-    xEditor.InvoiceForm := Self;
-    xEditor.EditMode := emInvoiceLineEdit;
-    xEditor.Caption := 'Редактирование позиции';
+    xEditorForm.EditMode := emInvoiceLineEdit;
+    xEditorForm.OnClose := EditInvoiceLineEditorClose;
+    xEditorForm.Caption := 'Edit invoice line';
 
-    xEditor.InvoiceLineId := qryInvoiceLine.FieldByName('INVOICE_LINE_ID').AsInteger;
-    xEditor.SetProduct(qryInvoiceLine.FieldByName('PRODUCT_ID').AsInteger,
-                       qryInvoiceLine.FieldByName('PRODUCTNAME').AsString,
-                       qryInvoiceLine.FieldByName('SALE_PRICE').AsCurrency);
-    xEditor.Quantity := qryInvoiceLine.FieldByName('QUANTITY').AsInteger;
+    xEditorForm.InvoiceLineId := Invoices.InvoiceLine.INVOICE_LINE_ID.Value;
+    xEditorForm.SetProduct(
+      Invoices.InvoiceLine.PRODUCT_ID.Value,
+      Invoices.InvoiceLine.PRODUCTNAME.Value,
+      Invoices.InvoiceLine.SALE_PRICE.AsCurrency);
+    xEditorForm.Quantity := Invoices.InvoiceLine.QUANTITY.Value;
 
-    xEditor.ShowModal;
+    xEditorForm.ShowModal;
   finally
-    xEditor.Free;
+    xEditorForm.Free;
   end;
 end;
 
@@ -1829,69 +1917,166 @@ end;
                 </programlisting>
         </para>
         <para>Обработку добавления новой позиции и редактирование существующей будем производить в
-            событии закрытия модальной формы.
-            <programlisting language="delphi"> 
-procedure TEditInvoiceLineForm.FormClose(Sender: TObject;
+            событии закрытия модальной формы. <programlisting language="delphi"> 
+<![CDATA[    
+procedure TInvoiceForm.actAddInvoiceLineExecute(Sender: TObject);
+var
+  xEditorForm: TEditInvoiceLineForm;
+begin
+  xEditorForm := TEditInvoiceLineForm.Create(Self);
+  try
+    xEditorForm.EditMode := emInvoiceLineAdd;
+    xEditorForm.OnClose := AddInvoiceLineEditorClose;
+    xEditorForm.Caption := 'Add invoice line';
+
+    xEditorForm.Quantity := 1;
+    xEditorForm.InvoiceId := Invoices.Invoice.INVOICE_ID.Value;
+    xEditorForm.ShowModal;
+  finally
+    xEditorForm.Free;
+  end;
+end;
+
+procedure TInvoiceForm.actEditInvoiceLineExecute(Sender: TObject);
+var
+  xEditorForm: TEditInvoiceLineForm;
+begin
+  xEditorForm := TEditInvoiceLineForm.Create(Self);
+  try
+    xEditorForm.EditMode := emInvoiceLineEdit;
+    xEditorForm.OnClose := EditInvoiceLineEditorClose;
+    xEditorForm.Caption := 'Edit invoice line';
+
+    xEditorForm.InvoiceLineId := Invoices.InvoiceLine.INVOICE_LINE_ID.Value;
+    xEditorForm.SetProduct(
+      Invoices.InvoiceLine.PRODUCT_ID.Value,
+      Invoices.InvoiceLine.PRODUCTNAME.Value,
+      Invoices.InvoiceLine.SALE_PRICE.AsCurrency);
+    xEditorForm.Quantity := Invoices.InvoiceLine.QUANTITY.Value;
+
+    xEditorForm.ShowModal;
+  finally
+    xEditorForm.Free;
+  end;
+end;
+
+procedure TInvoiceForm.AddInvoiceLineEditorClose(Sender: TObject;
   var Action: TCloseAction);
 var
+  xEditorForm: TEditInvoiceLineForm;
   xCustomerId: Integer;
 begin
-  // если форма закрыта не по нажатию кнопки OK, 
-  // то вообще ничего не делаем. Транзакция не стартует.
-  if ModalResult &lt;&gt; mrOK then
+  xEditorForm := TEditInvoiceLineForm(Sender);
+
+  if xEditorForm.ModalResult <> mrOK then
   begin
     Action := caFree;
     Exit;
   end;
 
-  // Всё делаем в короткой транзакции
-  FInvoiceForm.trWrite.StartTransaction;
   try
-    if FEditMode = emInvoiceLineAdd then
-    begin
-      FInvoiceForm.qryAddInvoiceLine.ParamByName('INVOICE_ID').AsInteger :=
-        FInvoiceId;
-
-      if FProductId = 0 then
-        raise Exception.Create('Не выбран товар');
-        
-
-      FInvoiceForm.qryAddInvoiceLine.ParamByName('PRODUCT_ID').AsInteger :=
-        FProductId;
-      FInvoiceForm.qryAddInvoiceLine.ParamByName('QUANTITY').AsInteger :=
-        FQuantity;
-      // Выполняем хранимую процедуру для добавления позиции 
-      FInvoiceForm.qryAddInvoiceLine.Execute();
-    end;
-
-    if FEditMode = emInvoiceLineEdit then
-    begin
-      FInvoiceForm.qryEditInvoiceLine.ParamByName('INVOICE_LINE_ID').AsInteger :=
-        FInvoiceLineId;
-      FInvoiceForm.qryEditInvoiceLine.ParamByName('QUANTITY').AsInteger :=
-        FQuantity;
-      // Выполняем хранимую процедуру для редактирования  
-      FInvoiceForm.qryEditInvoiceLine.Execute();
-    end;
-    // Подтверждаем транзакцию
-    FInvoiceForm.trWrite.Commit;
-    // Обновляем оба грида
-    FInvoiceForm.qryInvoice.Refresh;
-    FInvoiceForm.qryInvoiceLine.Refresh;
+    Invoices.AddInvoiceLine(xEditorForm.ProductId, xEditorForm.Quantity);
 
     Action := caFree;
   except
     on E: Exception do
     begin
-      if FInvoiceForm.trWrite.Active then
-        FInvoiceForm.trWrite.Rollback;
       Application.ShowException(E);
-      // Не загрываем окно редактирования. Позволяем пользователю исправить ошибку
+      // It does not close the window give the user correct the error
       Action := caNone;
     end;
   end;
 end;
+
+procedure TInvoiceForm.EditInvoiceLineEditorClose(Sender: TObject;
+  var Action: TCloseAction);
+var
+  xCustomerId: Integer;
+  xEditorForm: TEditInvoiceLineForm;
+begin
+  xEditorForm := TEditInvoiceLineForm(Sender);
+
+  if xEditorForm.ModalResult <> mrOK then
+  begin
+    Action := caFree;
+    Exit;
+  end;
+
+  try
+    Invoices.EditInvoiceLine(xEditorForm.Quantity);
+
+    Action := caFree;
+  except
+    on E: Exception do
+    begin
+      Application.ShowException(E);
+      // It does not close the window give the user correct the error
+      Action := caNone;
+    end;
+  end;
+end;
+]]>
                 </programlisting>
+        </para>
+        <para>Теперь приведём код процедур <methodname>AddInvoiceLine</methodname> и
+                <methodname>EditInvoiceLine</methodname> модуля данных <varname>dmInvoice</varname>: <programlisting>
+<![CDATA[
+procedure TdmInvoice.AddInvoiceLine(AProductId: Integer; AQuantity: Integer);
+begin
+  // We do everything in a short transaction
+  trWrite.StartTransaction;
+  try
+    qryAddInvoiceLine.ParamByName('INVOICE_ID').AsInteger :=
+      Invoice.INVOICE_ID.Value;
+
+    if AProductId = 0 then
+      raise Exception.Create('Not selected product');
+
+    qryAddInvoiceLine.ParamByName('PRODUCT_ID').AsInteger := AProductId;
+    qryAddInvoiceLine.ParamByName('QUANTITY').AsInteger := AQuantity;
+
+    qryAddInvoiceLine.Execute();
+
+    trWrite.Commit;
+    qryInvoice.Refresh;
+    qryInvoiceLine.Refresh;
+
+  except
+    on E: Exception do
+    begin
+      if trWrite.Active then
+        trWrite.Rollback;
+      raise;
+    end;
+  end;
+end;
+
+procedure TdmInvoice.EditInvoiceLine(AQuantity: Integer);
+begin
+  // We do everything in a short transaction
+  trWrite.StartTransaction;
+  try
+    qryEditInvoiceLine.ParamByName('INVOICE_LINE_ID').AsInteger :=
+      InvoiceLine.INVOICE_LINE_ID.Value;
+    qryEditInvoiceLine.ParamByName('QUANTITY').AsInteger := AQuantity;
+
+    qryEditInvoiceLine.Execute();
+
+    trWrite.Commit;
+    qryInvoice.Refresh;
+    qryInvoiceLine.Refresh;
+
+  except
+    on E: Exception do
+    begin
+      if trWrite.Active then
+        trWrite.Rollback;
+      raise;
+    end;
+  end;
+end;
+]]>            
+        </programlisting>
         </para>
         <para>В итоге у нас получилось приложение которое выглядит следующим образом: <figure>
                 <title>Скриншот работающего приложения</title>
